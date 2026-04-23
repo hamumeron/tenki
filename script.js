@@ -1,206 +1,185 @@
-// ===== Three.js（ES Modules）=====
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
 
 // ===== 状態 =====
 let windX = 0;
+let weatherType = "clear";
 let rain = [];
 let splashes = [];
-let weatherType = "clear"; // ← 天気状態
 
 // ===== Canvas =====
 const canvas = document.getElementById("rainCanvas");
 const ctx = canvas.getContext("2d");
 
 function resize() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  canvas.width = innerWidth;
+  canvas.height = innerHeight;
 }
 window.addEventListener("resize", resize);
 resize();
 
-// ===== Three.js 初期化 =====
+// ===== Three.js =====
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(
-  75,
-  window.innerWidth / window.innerHeight,
-  1,
-  1000
-);
+const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 1, 1000);
+camera.position.z = 200;
 
-const renderer = new THREE.WebGLRenderer({ alpha: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
+const renderer = new THREE.WebGLRenderer({ alpha:true });
+renderer.setSize(innerWidth, innerHeight);
 renderer.domElement.style.position = "fixed";
-renderer.domElement.style.top = "0";
-renderer.domElement.style.left = "0";
 renderer.domElement.style.zIndex = "0";
 document.body.appendChild(renderer.domElement);
 
-camera.position.z = 200;
+// ===== 雲（粒子っぽくリアル化）=====
+const cloudParticles = [];
 
-// 光
-const light = new THREE.DirectionalLight(0xffffff, 1);
-light.position.set(0, 1, 1);
+const cloudTexture = new THREE.TextureLoader().load(
+  "https://threejs.org/examples/textures/cloud.png"
+);
+
+const cloudMaterial = new THREE.MeshLambertMaterial({
+  map: cloudTexture,
+  transparent: true
+});
+
+const cloudGeo = new THREE.PlaneGeometry(300,300);
+
+for(let i=0;i<25;i++){
+  const cloud = new THREE.Mesh(cloudGeo, cloudMaterial);
+  cloud.position.set(
+    Math.random()*800-400,
+    Math.random()*500-250,
+    Math.random()*500-500
+  );
+  cloud.rotation.z = Math.random()*Math.PI;
+  cloud.material.opacity = 0.5 + Math.random()*0.5;
+
+  scene.add(cloud);
+  cloudParticles.push(cloud);
+}
+
+const light = new THREE.DirectionalLight(0xffffff,1);
+light.position.set(0,0,1);
 scene.add(light);
 
-// ===== 雲 =====
-const clouds = [];
-const cloudGeo = new THREE.SphereGeometry(20, 16, 16);
-const cloudMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
-
-function createClouds() {
-  clouds.length = 0;
-  for (let i = 0; i < 30; i++) {
-    const cloud = new THREE.Mesh(cloudGeo, cloudMat);
-    cloud.position.set(
-      Math.random() * 400 - 200,
-      Math.random() * 200 - 100,
-      Math.random() * 200 - 100
-    );
-    cloud.scale.set(1.5, 1, 1);
-    scene.add(cloud);
-    clouds.push(cloud);
-  }
-}
-createClouds();
-
 // ===== 雨 =====
-function createRain() {
-  rain = [];
-  for (let i = 0; i < 300; i++) {
+function createRain(){
+  rain=[];
+  for(let i=0;i<400;i++){
     rain.push({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      speed: 4 + Math.random() * 4
+      x:Math.random()*canvas.width,
+      y:Math.random()*canvas.height,
+      speed:4+Math.random()*5
     });
   }
 }
 createRain();
 
-// ===== 描画ループ =====
-function animate() {
+// ===== 描画 =====
+function animate(){
   requestAnimationFrame(animate);
 
-  // 雲（曇り・晴れのとき）
-  if (weatherType === "clouds" || weatherType === "clear") {
-    clouds.forEach(c => {
-      c.position.x += 0.05;
-      if (c.position.x > 200) c.position.x = -200;
+  // 雲動き
+  if(weatherType==="clear"||weatherType==="clouds"){
+    cloudParticles.forEach(p=>{
+      p.rotation.z += 0.0005;
+      p.position.x += 0.2;
+      if(p.position.x>400) p.position.x=-400;
     });
   }
 
-  renderer.render(scene, camera);
+  renderer.render(scene,camera);
 
-  // Canvasクリア
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // ===== 雨（雨・雷雨のときだけ）=====
-  if (weatherType === "rain" || weatherType === "thunder") {
-    ctx.strokeStyle = "rgba(255,255,255,0.7)";
-    ctx.lineWidth = 1;
-
-    rain.forEach(r => {
+  // 雨
+  if(weatherType==="rain"||weatherType==="thunder"){
+    ctx.strokeStyle="rgba(255,255,255,0.7)";
+    rain.forEach(r=>{
       ctx.beginPath();
-      ctx.moveTo(r.x, r.y);
-      ctx.lineTo(r.x + windX, r.y + 10);
+      ctx.moveTo(r.x,r.y);
+      ctx.lineTo(r.x+windX,r.y+10);
       ctx.stroke();
 
-      r.x += windX * 0.2;
-      r.y += r.speed;
+      r.x+=windX*0.2;
+      r.y+=r.speed;
 
-      if (r.y > canvas.height) {
-        // 衝突エフェクト
-        splashes.push({ x: r.x, y: canvas.height, life: 10 });
-
-        r.y = 0;
-        r.x = Math.random() * canvas.width;
+      if(r.y>canvas.height){
+        splashes.push({x:r.x,y:canvas.height,life:10});
+        r.y=0;
+        r.x=Math.random()*canvas.width;
       }
     });
   }
 
-  // ===== 水しぶき =====
-  ctx.fillStyle = "rgba(255,255,255,0.8)";
-  splashes.forEach((s, i) => {
-    ctx.fillRect(s.x, s.y, 2, 2);
-    s.y -= 2;
+  // 水しぶき
+  ctx.fillStyle="white";
+  splashes.forEach((s,i)=>{
+    ctx.fillRect(s.x,s.y,2,2);
+    s.y-=2;
     s.life--;
-
-    if (s.life <= 0) splashes.splice(i, 1);
+    if(s.life<=0) splashes.splice(i,1);
   });
 }
 animate();
 
 // ===== 時刻 =====
-setInterval(() => {
-  const el = document.getElementById("time");
-  if (el) {
-    el.textContent = new Date().toLocaleTimeString("ja-JP");
-  }
-}, 1000);
+setInterval(()=>{
+  document.getElementById("time").textContent =
+    new Date().toLocaleTimeString("ja-JP");
+},1000);
 
 // ===== 天気テキスト =====
-function getWeatherText(code) {
-  if (code === 0) return "快晴";
-  if (code <= 3) return "晴れ";
-  if (code <= 48) return "曇り";
-  if (code <= 67) return "雨";
-  if (code <= 77) return "雪";
+function getWeatherText(code){
+  if(code===0) return "快晴";
+  if(code<=3) return "晴れ";
+  if(code<=48) return "曇り";
+  if(code<=67) return "雨";
   return "雷雨";
 }
 
-// ===== 天気タイプ切替 =====
-function setWeatherType(code) {
-  if (code === 0) weatherType = "clear";
-  else if (code <= 3) weatherType = "clear";
-  else if (code <= 48) weatherType = "clouds";
-  else if (code <= 67) weatherType = "rain";
-  else weatherType = "thunder";
+// ===== 天気切替 =====
+function setWeatherType(code){
+  if(code===0) weatherType="clear";
+  else if(code<=3) weatherType="clear";
+  else if(code<=48) weatherType="clouds";
+  else if(code<=67) weatherType="rain";
+  else weatherType="thunder";
 }
-
-// ===== 天気取得 =====
-function getLocationWeather() {
-  if (!navigator.geolocation) return;
-
-  navigator.geolocation.getCurrentPosition(pos => {
-    fetchWeather(pos.coords.latitude, pos.coords.longitude);
-  });
-}
-window.getLocationWeather = getLocationWeather;
 
 // ===== API =====
-async function fetchWeather(lat, lon) {
-  try {
-    const res = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`
-    );
-    const data = await res.json();
+async function fetchWeather(lat,lon){
+  const res = await fetch(
+    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`
+  );
+  const data = await res.json();
 
-    const w = data.current_weather;
+  const w = data.current_weather;
 
-    // UI表示
-    const tempEl = document.getElementById("temp");
-    const descEl = document.getElementById("desc");
+  document.getElementById("temp").textContent = `${w.temperature}℃`;
+  document.getElementById("weatherText").textContent =
+    getWeatherText(w.weathercode);
 
-    if (tempEl) tempEl.textContent = `${w.temperature}℃`;
-    if (descEl) descEl.textContent = getWeatherText(w.weathercode);
+  windX = w.windspeed/2;
 
-    // 風
-    windX = w.windspeed / 2;
+  document.getElementById("arrow").style.transform =
+    `rotate(${w.winddirection}deg)`;
 
-    // 風向きUI
-    const arrow = document.getElementById("arrow");
-    if (arrow) {
-      arrow.style.transform = `rotate(${w.winddirection}deg)`;
-    }
+  document.getElementById("speed").textContent =
+    `${w.windspeed} km/h`;
 
-    const speed = document.getElementById("speed");
-    if (speed) {
-      speed.textContent = `${w.windspeed} km/h`;
-    }
-
-    // 天気状態更新（これが重要）
-    setWeatherType(w.weathercode);
-
-  } catch (e) {
-    console.error("天気取得エラー", e);
-  }
+  setWeatherType(w.weathercode);
 }
+
+// ===== 自動取得（ここ重要）=====
+navigator.geolocation.getCurrentPosition(pos=>{
+  fetchWeather(pos.coords.latitude,pos.coords.longitude);
+});
+
+// ===== テスト用（コンソール）=====
+window.setWeather = (type)=>{
+  console.log("テスト:",type);
+
+  if(type==="晴れ") weatherType="clear";
+  else if(type==="曇") weatherType="clouds";
+  else if(type==="雨") weatherType="rain";
+  else if(type==="雷雨") weatherType="thunder";
+};
