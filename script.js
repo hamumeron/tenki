@@ -1,10 +1,11 @@
 // ===== Three.js（ES Modules）=====
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
 
-// ===== 先に変数定義（重要）=====
+// ===== 状態 =====
 let windX = 0;
 let rain = [];
 let splashes = [];
+let weatherType = "clear"; // ← 天気状態
 
 // ===== Canvas =====
 const canvas = document.getElementById("rainCanvas");
@@ -79,39 +80,44 @@ createRain();
 function animate() {
   requestAnimationFrame(animate);
 
-  // 雲
-  clouds.forEach(c => {
-    c.position.x += 0.05;
-    if (c.position.x > 200) c.position.x = -200;
-  });
+  // 雲（曇り・晴れのとき）
+  if (weatherType === "clouds" || weatherType === "clear") {
+    clouds.forEach(c => {
+      c.position.x += 0.05;
+      if (c.position.x > 200) c.position.x = -200;
+    });
+  }
 
   renderer.render(scene, camera);
 
-  // 雨
+  // Canvasクリア
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  ctx.strokeStyle = "rgba(255,255,255,0.7)";
-  ctx.lineWidth = 1;
+  // ===== 雨（雨・雷雨のときだけ）=====
+  if (weatherType === "rain" || weatherType === "thunder") {
+    ctx.strokeStyle = "rgba(255,255,255,0.7)";
+    ctx.lineWidth = 1;
 
-  rain.forEach(r => {
-    ctx.beginPath();
-    ctx.moveTo(r.x, r.y);
-    ctx.lineTo(r.x + windX, r.y + 10);
-    ctx.stroke();
+    rain.forEach(r => {
+      ctx.beginPath();
+      ctx.moveTo(r.x, r.y);
+      ctx.lineTo(r.x + windX, r.y + 10);
+      ctx.stroke();
 
-    r.x += windX * 0.2;
-    r.y += r.speed;
+      r.x += windX * 0.2;
+      r.y += r.speed;
 
-    if (r.y > canvas.height) {
-      // 衝突エフェクト
-      splashes.push({ x: r.x, y: canvas.height, life: 10 });
+      if (r.y > canvas.height) {
+        // 衝突エフェクト
+        splashes.push({ x: r.x, y: canvas.height, life: 10 });
 
-      r.y = 0;
-      r.x = Math.random() * canvas.width;
-    }
-  });
+        r.y = 0;
+        r.x = Math.random() * canvas.width;
+      }
+    });
+  }
 
-  // 水しぶき
+  // ===== 水しぶき =====
   ctx.fillStyle = "rgba(255,255,255,0.8)";
   splashes.forEach((s, i) => {
     ctx.fillRect(s.x, s.y, 2, 2);
@@ -130,6 +136,25 @@ setInterval(() => {
     el.textContent = new Date().toLocaleTimeString("ja-JP");
   }
 }, 1000);
+
+// ===== 天気テキスト =====
+function getWeatherText(code) {
+  if (code === 0) return "快晴";
+  if (code <= 3) return "晴れ";
+  if (code <= 48) return "曇り";
+  if (code <= 67) return "雨";
+  if (code <= 77) return "雪";
+  return "雷雨";
+}
+
+// ===== 天気タイプ切替 =====
+function setWeatherType(code) {
+  if (code === 0) weatherType = "clear";
+  else if (code <= 3) weatherType = "clear";
+  else if (code <= 48) weatherType = "clouds";
+  else if (code <= 67) weatherType = "rain";
+  else weatherType = "thunder";
+}
 
 // ===== 天気取得 =====
 function getLocationWeather() {
@@ -151,11 +176,14 @@ async function fetchWeather(lat, lon) {
 
     const w = data.current_weather;
 
-    // UI
+    // UI表示
     const tempEl = document.getElementById("temp");
-    if (tempEl) tempEl.textContent = `${w.temperature}℃`;
+    const descEl = document.getElementById("desc");
 
-    // 風（ここで代入）
+    if (tempEl) tempEl.textContent = `${w.temperature}℃`;
+    if (descEl) descEl.textContent = getWeatherText(w.weathercode);
+
+    // 風
     windX = w.windspeed / 2;
 
     // 風向きUI
@@ -168,6 +196,9 @@ async function fetchWeather(lat, lon) {
     if (speed) {
       speed.textContent = `${w.windspeed} km/h`;
     }
+
+    // 天気状態更新（これが重要）
+    setWeatherType(w.weathercode);
 
   } catch (e) {
     console.error("天気取得エラー", e);
