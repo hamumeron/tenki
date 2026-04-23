@@ -4,28 +4,29 @@
   <meta charset="UTF-8">
   <title>天気</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <link rel="stylesheet" href="style.css">
+
+  <!-- Three.js -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 </head>
-<body id="body">
+<body>
 
-  <canvas id="canvas"></canvas>
-
-  <div class="container">
-    <h1></h1>
-    <div id="time" class="time"></div>
-
+  <div id="ui">
+    <div id="time"></div>
     <button onclick="getLocationWeather()">現在地</button>
-    <button onclick="toggleSound()">ON/OFF</button>
 
-    <div id="card" class="card hidden">
+    <div id="wind">
+      <div id="arrow">↑</div>
+      <div id="speed"></div>
+    </div>
+
+    <div id="info">
       <p id="temp"></p>
-      <p id="desc"></p>
-      <p id="extra"></p>
     </div>
   </div>
 
-  <audio id="rainSound" loop src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3"></audio>
-  <audio id="thunderSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_7b9d02b7c7.mp3"></audio>
+  <canvas id="rainCanvas"></canvas>
 
   <script src="script.js"></script>
 </body>
