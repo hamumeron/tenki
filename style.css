@@ -6,32 +6,29 @@ body {
   margin: 0;
   font-family: 'Segoe UI', sans-serif;
   height: 100vh;
-  background: linear-gradient(135deg, #667eea, #764ba2);
   display: flex;
   justify-content: center;
   align-items: center;
   color: white;
+  transition: background 0.8s ease;
 }
+
+/* 背景 */
+body.clear { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+body.clouds { background: linear-gradient(135deg, #757f9a, #d7dde8); }
+body.rain { background: linear-gradient(135deg, #314755, #26a0da); }
+body.snow { background: linear-gradient(135deg, #e6dada, #274046); }
+body.night { background: linear-gradient(135deg, #141e30, #243b55); }
 
 .container {
   text-align: center;
   width: 300px;
 }
 
-h1 {
-  margin-bottom: 20px;
-}
-
-.search {
-  display: flex;
-  gap: 10px;
-}
-
-input {
-  flex: 1;
-  padding: 10px;
-  border-radius: 10px;
-  border: none;
+.time {
+  font-size: 32px;
+  margin-bottom: 10px;
+  font-weight: bold;
 }
 
 button {
@@ -41,11 +38,6 @@ button {
   background: white;
   color: #333;
   cursor: pointer;
-  transition: 0.2s;
-}
-
-button:hover {
-  transform: scale(1.05);
 }
 
 .card {
@@ -54,25 +46,8 @@ button:hover {
   border-radius: 20px;
   backdrop-filter: blur(15px);
   background: rgba(255,255,255,0.2);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-  animation: fadeIn 0.5s ease;
 }
 
 .hidden {
   display: none;
-}
-
-img {
-  width: 80px;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
