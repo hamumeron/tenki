@@ -1,4 +1,4 @@
-const API_KEY = "ここにAPIキー";
+const API_KEY = "23bf01617f919e68753ccaac1b9db719";
 
 // 初回
 window.onload = () => {
