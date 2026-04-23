@@ -1,29 +1,620 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <title>天気</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>天気予報</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  <link rel="stylesheet" href="style.css">
-  <script type="module" src="script.js" defer></script>
+    :root {
+      --glass: rgba(255,255,255,0.12);
+      --glass-border: rgba(255,255,255,0.2);
+      --text: rgba(255,255,255,0.95);
+      --text-sub: rgba(255,255,255,0.7);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+      min-height: 100vh;
+      color: var(--text);
+      overflow-x: hidden;
+      position: relative;
+      transition: background 1.5s ease;
+    }
+
+    #bgCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+
+    #app {
+      position: relative;
+      z-index: 10;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 16px 40px;
+    }
+
+    .search-bar {
+      margin: 20px auto 0;
+      width: 100%;
+      max-width: 500px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .search-bar input {
+      flex: 1;
+      padding: 12px 20px;
+      border-radius: 100px;
+      border: 1.5px solid var(--glass-border);
+      background: var(--glass);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      color: #fff;
+      font-size: 16px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-bar input::placeholder { color: rgba(255,255,255,0.5); }
+    .search-bar input:focus { border-color: rgba(255,255,255,0.6); }
+
+    .search-bar button {
+      padding: 12px 22px;
+      border-radius: 100px;
+      border: 1.5px solid var(--glass-border);
+      background: var(--glass);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      color: #fff;
+      font-size: 15px;
+      cursor: pointer;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+
+    .search-bar button:hover { background: rgba(255,255,255,0.2); }
+
+    .main-card {
+      margin-top: 24px;
+      width: 100%;
+      max-width: 500px;
+      background: var(--glass);
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(30px);
+      border: 1.5px solid var(--glass-border);
+      border-radius: 28px;
+      padding: 32px 28px 28px;
+      text-align: center;
+    }
+
+    .city-name { font-size: 26px; font-weight: 600; letter-spacing: -0.3px; }
+    .current-temp { font-size: 96px; font-weight: 200; line-height: 1; margin: 8px 0 4px; letter-spacing: -4px; }
+    .weather-desc { font-size: 20px; color: var(--text-sub); font-weight: 400; margin-bottom: 4px; }
+    .temp-range { font-size: 16px; color: var(--text-sub); margin-bottom: 20px; }
+
+    .stats-row {
+      display: flex;
+      justify-content: space-around;
+      border-top: 1px solid var(--glass-border);
+      padding-top: 18px;
+      margin-top: 4px;
+    }
+
+    .stat { text-align: center; }
+    .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-sub); margin-bottom: 4px; }
+    .stat-value { font-size: 20px; font-weight: 500; }
+
+    .hourly-card {
+      margin-top: 16px;
+      width: 100%;
+      max-width: 500px;
+      background: var(--glass);
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(30px);
+      border: 1.5px solid var(--glass-border);
+      border-radius: 20px;
+      padding: 18px 20px;
+      overflow-x: auto;
+    }
+
+    .card-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-sub); margin-bottom: 14px; }
+
+    .hourly-row { display: flex; gap: 20px; min-width: max-content; }
+
+    .hour-item { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 48px; }
+    .hour-time { font-size: 13px; color: var(--text-sub); }
+    .hour-icon { font-size: 24px; }
+    .hour-temp { font-size: 16px; font-weight: 500; }
+    .hour-rain { font-size: 11px; color: #7ec8ff; }
+
+    .daily-card {
+      margin-top: 16px;
+      width: 100%;
+      max-width: 500px;
+      background: var(--glass);
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(30px);
+      border: 1.5px solid var(--glass-border);
+      border-radius: 20px;
+      padding: 18px 20px;
+    }
+
+    .daily-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .daily-row:last-child { border-bottom: none; }
+    .daily-day { flex: 1; font-size: 16px; }
+    .daily-icon { font-size: 22px; }
+    .daily-bar-wrap { flex: 2; display: flex; align-items: center; gap: 8px; }
+    .daily-bar-bg { flex: 1; height: 4px; border-radius: 4px; background: rgba(255,255,255,0.15); position: relative; overflow: hidden; }
+    .daily-bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #7ec8ff, #ffb347); }
+    .daily-lo { font-size: 14px; color: var(--text-sub); min-width: 28px; text-align: right; }
+    .daily-hi { font-size: 14px; font-weight: 500; min-width: 28px; text-align: right; }
+
+    .extra-grid {
+      margin-top: 16px;
+      width: 100%;
+      max-width: 500px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .extra-card {
+      background: var(--glass);
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(30px);
+      border: 1.5px solid var(--glass-border);
+      border-radius: 20px;
+      padding: 18px;
+    }
+
+    .extra-card .card-label { margin-bottom: 8px; }
+    .extra-value { font-size: 32px; font-weight: 300; }
+    .extra-sub { font-size: 13px; color: var(--text-sub); margin-top: 4px; }
+
+    .status-msg { margin-top: 60px; font-size: 18px; color: var(--text-sub); text-align: center; }
+
+    #rainCanvas { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+
+    .hourly-card::-webkit-scrollbar { height: 3px; }
+    .hourly-card::-webkit-scrollbar-track { background: transparent; }
+    .hourly-card::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); border-radius: 3px; }
+  </style>
 </head>
 <body>
 
-  <div id="ui">
-    <div id="time"></div>
+<canvas id="bgCanvas"></canvas>
+<canvas id="rainCanvas"></canvas>
 
-    <div id="weatherBox">
-      <div id="weatherText">---</div>
-      <div id="temp"></div>
-    </div>
-
-    <div id="wind">
-      <div id="arrow">↑</div>
-      <div id="speed"></div>
-    </div>
+<div id="app">
+  <div class="search-bar">
+    <input id="cityInput" type="text" placeholder="都市名を入力 (例: Tokyo)" value="" />
+    <button onclick="searchCity()">検索</button>
+    <button onclick="getMyLocation()">現在地</button>
   </div>
+  <div id="content">
+    <p class="status-msg">都市名を入力するか、現在地ボタンを押してください。</p>
+  </div>
+</div>
 
-  <canvas id="rainCanvas"></canvas>
+<script>
+const WMO = {
+  0:  { icon:'☀️', desc:'快晴',         theme:'sunny'   },
+  1:  { icon:'🌤', desc:'ほぼ晴れ',     theme:'sunny'   },
+  2:  { icon:'⛅', desc:'一部曇り',     theme:'partly'  },
+  3:  { icon:'☁️', desc:'曇り',         theme:'cloudy'  },
+  45: { icon:'🌫', desc:'霧',           theme:'foggy'   },
+  48: { icon:'🌫', desc:'霧（着氷）',   theme:'foggy'   },
+  51: { icon:'🌦', desc:'霧雨（弱）',   theme:'rainy'   },
+  53: { icon:'🌦', desc:'霧雨',         theme:'rainy'   },
+  55: { icon:'🌧', desc:'霧雨（強）',   theme:'rainy'   },
+  61: { icon:'🌧', desc:'小雨',         theme:'rainy'   },
+  63: { icon:'🌧', desc:'雨',           theme:'rainy'   },
+  65: { icon:'🌧', desc:'大雨',         theme:'rainy'   },
+  71: { icon:'🌨', desc:'小雪',         theme:'snowy'   },
+  73: { icon:'❄️', desc:'雪',           theme:'snowy'   },
+  75: { icon:'❄️', desc:'大雪',         theme:'snowy'   },
+  80: { icon:'🌦', desc:'にわか雨',     theme:'rainy'   },
+  81: { icon:'🌧', desc:'雨（強め）',   theme:'rainy'   },
+  82: { icon:'🌧', desc:'激しい雨',     theme:'rainy'   },
+  85: { icon:'🌨', desc:'にわか雪',     theme:'snowy'   },
+  86: { icon:'❄️', desc:'激しい雪',     theme:'snowy'   },
+  95: { icon:'⛈', desc:'雷雨',         theme:'thunder' },
+  96: { icon:'⛈', desc:'雷雨＋ひょう', theme:'thunder' },
+  99: { icon:'⛈', desc:'激しい雷雨',   theme:'thunder' },
+};
+
+function getWmo(code){ return WMO[code] || { icon:'🌡', desc:'不明', theme:'cloudy' }; }
+
+const THEMES = {
+  sunny:  { bg1:'#1a90d8', bg2:'#74c0f0' },
+  partly: { bg1:'#3a7fb5', bg2:'#94b8d4' },
+  cloudy: { bg1:'#4a5568', bg2:'#718096' },
+  foggy:  { bg1:'#6b7280', bg2:'#9ca3af' },
+  rainy:  { bg1:'#1e3a5f', bg2:'#2d5f8a' },
+  snowy:  { bg1:'#a8c0cc', bg2:'#dce8ef' },
+  thunder:{ bg1:'#1a1a2e', bg2:'#16213e' },
+};
+
+let currentTheme = 'sunny';
+let animFrame = null;
+let rainAnimFrame = null;
+
+const bgCanvas = document.getElementById('bgCanvas');
+const bgCtx = bgCanvas.getContext('2d');
+const rainCanvas = document.getElementById('rainCanvas');
+const rainCtx = rainCanvas.getContext('2d');
+
+function resizeCanvases(){
+  bgCanvas.width = window.innerWidth; bgCanvas.height = window.innerHeight;
+  rainCanvas.width = window.innerWidth; rainCanvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvases);
+resizeCanvases();
+
+const clouds = Array.from({length: 12}, () => ({
+  x: Math.random() * window.innerWidth,
+  y: 60 + Math.random() * 300,
+  r: 60 + Math.random() * 100,
+  speed: 0.15 + Math.random() * 0.3,
+  alpha: 0.08 + Math.random() * 0.14,
+  dark: false,
+}));
+
+const stars = Array.from({length: 80}, () => ({
+  x: Math.random() * 1000,
+  y: Math.random() * 400,
+  r: 0.5 + Math.random() * 1.2,
+  tw: Math.random() * Math.PI * 2,
+}));
+
+const snowflakes = Array.from({length: 100}, () => ({
+  x: Math.random() * 1000,
+  y: Math.random() * 1000,
+  r: 1 + Math.random() * 3,
+  vy: 0.3 + Math.random() * 0.8,
+  vx: -0.3 + Math.random() * 0.6,
+  alpha: 0.4 + Math.random() * 0.5,
+}));
+
+let lightningTimer = 0;
+let lightningFlash = 0;
+
+function drawLightning(ctx, x, y, len, branches){
+  ctx.save();
+  ctx.strokeStyle = `rgba(220,220,255,${0.8 + Math.random()*0.2})`;
+  ctx.lineWidth = 1.5;
+  ctx.shadowColor = '#aad4ff';
+  ctx.shadowBlur = 12;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  let cx = x, cy = y;
+  for(let i = 0; i < 10; i++){
+    cx += -20 + Math.random()*40;
+    cy += len/10;
+    ctx.lineTo(cx, cy);
+  }
+  ctx.stroke();
+  if(branches > 0) drawLightning(ctx, cx, cy - len*0.3, len*0.5, branches-1);
+  ctx.restore();
+}
+
+const rainDrops = Array.from({length: 200}, () => ({
+  x: Math.random() * 1000,
+  y: Math.random() * 1000,
+  len: 10 + Math.random() * 20,
+  speed: 8 + Math.random() * 8,
+  alpha: 0.15 + Math.random() * 0.35,
+}));
+
+const fogLayers = Array.from({length: 5}, (_, i) => ({
+  y: 100 + i * 80,
+  x: Math.random() * 600,
+  speed: 0.1 + i * 0.05,
+  alpha: 0.06 + Math.random() * 0.06,
+}));
+
+function drawRain(){
+  if(rainAnimFrame) cancelAnimationFrame(rainAnimFrame);
+  const isRain = currentTheme === 'rainy' || currentTheme === 'thunder';
+  if(!isRain){ rainCtx.clearRect(0,0,rainCanvas.width,rainCanvas.height); return; }
+  function loop(){
+    rainCtx.clearRect(0,0,rainCanvas.width,rainCanvas.height);
+    rainDrops.forEach(d => {
+      d.y += d.speed; d.x += 1;
+      if(d.y > rainCanvas.height){ d.y = -d.len; d.x = Math.random()*rainCanvas.width; }
+      rainCtx.save();
+      rainCtx.strokeStyle = `rgba(180,210,255,${d.alpha})`;
+      rainCtx.lineWidth = 1;
+      rainCtx.beginPath();
+      rainCtx.moveTo(d.x, d.y);
+      rainCtx.lineTo(d.x + d.len*0.15, d.y + d.len);
+      rainCtx.stroke();
+      rainCtx.restore();
+    });
+    rainAnimFrame = requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+function applyThemeAnimation(theme){
+  currentTheme = theme;
+  if(animFrame) cancelAnimationFrame(animFrame);
+  const dark = theme === 'cloudy' || theme === 'foggy';
+  clouds.forEach(c => { c.dark = dark; });
+  const cfg = THEMES[theme] || THEMES.sunny;
+  document.body.style.background = `linear-gradient(170deg,${cfg.bg1} 0%,${cfg.bg2} 100%)`;
+
+  function frame(ts){
+    const W = bgCanvas.width, H = bgCanvas.height;
+    bgCtx.clearRect(0,0,W,H);
+    const grad = bgCtx.createLinearGradient(0,0,0,H);
+    grad.addColorStop(0, cfg.bg1);
+    grad.addColorStop(1, cfg.bg2);
+    bgCtx.fillStyle = grad;
+    bgCtx.fillRect(0,0,W,H);
+
+    if(theme === 'sunny' || theme === 'partly'){
+      const sx = W * 0.75, sy = H * 0.12;
+      const sunGrad = bgCtx.createRadialGradient(sx,sy,0,sx,sy,120);
+      sunGrad.addColorStop(0,'rgba(255,255,200,0.7)');
+      sunGrad.addColorStop(0.3,'rgba(255,220,80,0.35)');
+      sunGrad.addColorStop(1,'rgba(255,200,50,0)');
+      bgCtx.fillStyle = sunGrad;
+      bgCtx.beginPath();
+      bgCtx.arc(sx,sy,120,0,Math.PI*2);
+      bgCtx.fill();
+      bgCtx.save();
+      bgCtx.translate(sx,sy);
+      for(let i=0;i<12;i++){
+        bgCtx.save();
+        bgCtx.rotate(i*Math.PI/6 + ts*0.0003);
+        bgCtx.fillStyle = 'rgba(255,235,100,0.08)';
+        bgCtx.beginPath();
+        bgCtx.moveTo(0,0);
+        bgCtx.lineTo(-8, 200);
+        bgCtx.lineTo(8, 200);
+        bgCtx.closePath();
+        bgCtx.fill();
+        bgCtx.restore();
+      }
+      bgCtx.restore();
+    }
+
+    clouds.forEach(c => {
+      c.x += c.speed * (theme === 'thunder' ? 1.8 : 1);
+      if(c.x - c.r > W + 200) c.x = -c.r - 200;
+      const cg = bgCtx.createRadialGradient(c.x,c.y,0,c.x,c.y,c.r);
+      const col = theme === 'thunder' ? `rgba(30,35,60,${c.alpha*1.5})` :
+                  dark ? `rgba(80,90,110,${c.alpha*1.2})` :
+                  `rgba(255,255,255,${c.alpha})`;
+      cg.addColorStop(0, col);
+      cg.addColorStop(1, 'rgba(255,255,255,0)');
+      bgCtx.fillStyle = cg;
+      bgCtx.beginPath(); bgCtx.arc(c.x,c.y,c.r,0,Math.PI*2); bgCtx.fill();
+      bgCtx.beginPath(); bgCtx.arc(c.x+c.r*0.45, c.y+10, c.r*0.65, 0, Math.PI*2); bgCtx.fill();
+      bgCtx.beginPath(); bgCtx.arc(c.x-c.r*0.4, c.y+15, c.r*0.55, 0, Math.PI*2); bgCtx.fill();
+    });
+
+    if(theme === 'thunder'){
+      lightningTimer++;
+      if(lightningFlash > 0){
+        bgCtx.fillStyle = `rgba(180,180,255,${lightningFlash * 0.04})`;
+        bgCtx.fillRect(0,0,W,H);
+        lightningFlash -= 2;
+      }
+      if(lightningTimer > 180 + Math.random()*240){
+        lightningTimer = 0;
+        lightningFlash = 20;
+        drawLightning(bgCtx, W * (0.2 + Math.random()*0.6), 0, H*0.5, 2);
+      }
+      stars.forEach(s => {
+        s.tw += 0.02;
+        const a = 0.4 + Math.sin(s.tw) * 0.3;
+        bgCtx.fillStyle = `rgba(220,230,255,${a})`;
+        bgCtx.beginPath();
+        bgCtx.arc(s.x % W, s.y % (H*0.5), s.r, 0, Math.PI*2);
+        bgCtx.fill();
+      });
+    }
+
+    if(theme === 'snowy'){
+      snowflakes.forEach(s => {
+        s.y += s.vy; s.x += s.vx;
+        if(s.y > H) s.y = -10;
+        if(s.x > W) s.x = 0;
+        if(s.x < 0) s.x = W;
+        bgCtx.fillStyle = `rgba(255,255,255,${s.alpha})`;
+        bgCtx.beginPath();
+        bgCtx.arc(s.x,s.y,s.r,0,Math.PI*2);
+        bgCtx.fill();
+      });
+    }
+
+    if(theme === 'foggy'){
+      fogLayers.forEach(f => {
+        f.x += f.speed;
+        if(f.x > W+400) f.x = -400;
+        const fg = bgCtx.createLinearGradient(f.x-200,f.y,f.x+200,f.y);
+        fg.addColorStop(0,'rgba(255,255,255,0)');
+        fg.addColorStop(0.5,`rgba(200,210,215,${f.alpha})`);
+        fg.addColorStop(1,'rgba(255,255,255,0)');
+        bgCtx.fillStyle = fg;
+        bgCtx.fillRect(f.x-200,f.y-15,400,30);
+      });
+    }
+
+    animFrame = requestAnimationFrame(frame);
+  }
+  animFrame = requestAnimationFrame(frame);
+  drawRain();
+}
+
+async function geocode(city){
+  const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=ja&format=json`);
+  const d = await r.json();
+  if(!d.results || !d.results.length) throw new Error('都市が見つかりません');
+  return d.results[0];
+}
+
+async function fetchWeather(lat, lon){
+  const url = [
+    'https://api.open-meteo.com/v1/forecast',
+    '?latitude='+lat,
+    '&longitude='+lon,
+    '&current=temperature_2m,apparent_temperature,precipitation,weathercode,windspeed_10m,relativehumidity_2m,uv_index',
+    '&hourly=temperature_2m,weathercode,precipitation_probability',
+    '&daily=weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset',
+    '&wind_speed_unit=kmh',
+    '&timezone=auto',
+    '&forecast_days=7',
+  ].join('');
+  const r = await fetch(url);
+  return r.json();
+}
+
+function dayName(dateStr, idx){
+  if(idx === 0) return '今日';
+  if(idx === 1) return '明日';
+  const d = new Date(dateStr);
+  return ['日','月','火','水','木','金','土'][d.getDay()] + '曜';
+}
+
+function hourLabel(isoStr){
+  return new Date(isoStr).getHours() + '時';
+}
+
+function renderWeather(geo, data){
+  const cur = data.current;
+  const wmo = getWmo(cur.weathercode);
+  applyThemeAnimation(wmo.theme);
+
+  const daily = data.daily;
+  const hourly = data.hourly;
+  const nowHour = new Date().getHours();
+  const hourStart = hourly.time.findIndex(t => new Date(t).getHours() >= nowHour - 1);
+  const hs = {
+    time: hourly.time.slice(hourStart, hourStart+24),
+    temp: hourly.temperature_2m.slice(hourStart, hourStart+24),
+    code: hourly.weathercode.slice(hourStart, hourStart+24),
+    rain: hourly.precipitation_probability.slice(hourStart, hourStart+24),
+  };
+
+  const allLo = Math.min(...daily.temperature_2m_min);
+  const allHi = Math.max(...daily.temperature_2m_max);
+  const barPct = v => Math.max(0, Math.min(100, ((v - allLo) / (allHi - allLo)) * 100));
+
+  const htmlHourly = hs.time.map((t,i) => `
+    <div class="hour-item">
+      <span class="hour-time">${i === 0 ? '今' : hourLabel(t)}</span>
+      <span class="hour-icon">${getWmo(hs.code[i]).icon}</span>
+      <span class="hour-temp">${Math.round(hs.temp[i])}°</span>
+      <span class="hour-rain" ${hs.rain[i] <= 10 ? 'style="opacity:0"' : ''}>${hs.rain[i]}%</span>
+    </div>`).join('');
+
+  const htmlDaily = daily.temperature_2m_max.map((hi, i) => {
+    const lo = daily.temperature_2m_min[i];
+    const loP = barPct(lo), hiP = barPct(hi);
+    return `
+      <div class="daily-row">
+        <span class="daily-day">${dayName(daily.time[i], i)}</span>
+        <span class="daily-icon">${getWmo(daily.weathercode[i]).icon}</span>
+        <div class="daily-bar-wrap">
+          <span class="daily-lo">${Math.round(lo)}°</span>
+          <div class="daily-bar-bg">
+            <div class="daily-bar-fill" style="margin-left:${loP}%;width:${hiP-loP}%"></div>
+          </div>
+          <span class="daily-hi">${Math.round(hi)}°</span>
+        </div>
+      </div>`;
+  }).join('');
+
+  const uv = cur.uv_index;
+  const uvText = uv < 3 ? '低い' : uv < 6 ? '中程度' : uv < 8 ? '強い' : 'とても強い';
+
+  document.getElementById('content').innerHTML = `
+    <div class="main-card">
+      <div class="city-name">${geo.name}${geo.admin1 ? ', '+geo.admin1 : ''}</div>
+      <div class="current-temp">${Math.round(cur.temperature_2m)}°</div>
+      <div class="weather-desc">${wmo.desc}</div>
+      <div class="temp-range">最高 ${Math.round(daily.temperature_2m_max[0])}° / 最低 ${Math.round(daily.temperature_2m_min[0])}°</div>
+      <div class="stats-row">
+        <div class="stat"><div class="stat-label">体感</div><div class="stat-value">${Math.round(cur.apparent_temperature)}°</div></div>
+        <div class="stat"><div class="stat-label">湿度</div><div class="stat-value">${cur.relativehumidity_2m}%</div></div>
+        <div class="stat"><div class="stat-label">風速</div><div class="stat-value">${Math.round(cur.windspeed_10m)}<span style="font-size:13px"> km/h</span></div></div>
+      </div>
+    </div>
+    <div class="hourly-card">
+      <div class="card-label">時間ごとの予報</div>
+      <div class="hourly-row">${htmlHourly}</div>
+    </div>
+    <div class="daily-card">
+      <div class="card-label">7日間の予報</div>
+      ${htmlDaily}
+    </div>
+    <div class="extra-grid">
+      <div class="extra-card">
+        <div class="card-label">UV 指数</div>
+        <div class="extra-value">${Math.round(uv)}</div>
+        <div class="extra-sub">${uvText}</div>
+      </div>
+      <div class="extra-card">
+        <div class="card-label">降水量</div>
+        <div class="extra-value">${cur.precipitation}<span style="font-size:16px"> mm</span></div>
+        <div class="extra-sub">現在の降水</div>
+      </div>
+      <div class="extra-card">
+        <div class="card-label">日の出</div>
+        <div class="extra-value" style="font-size:22px">${daily.sunrise[0].slice(11,16)}</div>
+        <div class="extra-sub">今日</div>
+      </div>
+      <div class="extra-card">
+        <div class="card-label">日の入り</div>
+        <div class="extra-value" style="font-size:22px">${daily.sunset[0].slice(11,16)}</div>
+        <div class="extra-sub">今日</div>
+      </div>
+    </div>`;
+}
+
+async function searchCity(){
+  const city = document.getElementById('cityInput').value.trim();
+  if(!city) return;
+  showLoading();
+  try {
+    const geo = await geocode(city);
+    const data = await fetchWeather(geo.latitude, geo.longitude);
+    renderWeather(geo, data);
+  } catch(e){ showError(e.message); }
+}
+
+async function getMyLocation(){
+  if(!navigator.geolocation){ showError('Geolocationが使用できません'); return; }
+  showLoading();
+  navigator.geolocation.getCurrentPosition(async pos => {
+    try {
+      const { latitude: lat, longitude: lon } = pos.coords;
+      const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=ja`);
+      const geoData = await geoRes.json();
+      const cityName = geoData.address.city || geoData.address.town || geoData.address.village || '現在地';
+      const data = await fetchWeather(lat, lon);
+      renderWeather({ name: cityName, admin1: geoData.address.state || '' }, data);
+    } catch(e){ showError('天気の取得に失敗しました'); }
+  }, () => showError('位置情報の取得に失敗しました'));
+}
+
+function showLoading(){ document.getElementById('content').innerHTML = '<p class="status-msg">読み込み中...</p>'; }
+function showError(msg){ document.getElementById('content').innerHTML = `<p class="status-msg" style="color:rgba(255,100,100,0.9)">${msg}</p>`; }
+
+document.getElementById('cityInput').addEventListener('keydown', e => { if(e.key === 'Enter') searchCity(); });
+applyThemeAnimation('sunny');
+</script>
 </body>
 </html>
