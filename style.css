@@ -6,38 +6,35 @@ body {
   background: black;
 }
 
-canvas {
-  position: fixed;
-  top: 0;
-  left: 0;
-}
-
-.container {
-  position: relative;
-  z-index: 2;
+#ui {
+  position: absolute;
+  z-index: 10;
   text-align: center;
-  top: 50%;
-  transform: translateY(-50%);
+  width: 100%;
+  top: 20px;
 }
 
-.time {
-  font-size: 30px;
+#time {
+  font-size: 28px;
 }
 
 button {
-  margin: 5px;
+  margin-top: 10px;
   padding: 10px;
   border-radius: 10px;
-  border: none;
 }
 
-.card {
+#wind {
   margin-top: 10px;
-  padding: 15px;
-  background: rgba(255,255,255,0.2);
-  border-radius: 15px;
 }
 
-.hidden {
-  display: none;
+#arrow {
+  font-size: 30px;
+  transition: transform 0.3s;
+}
+
+#rainCanvas {
+  position: fixed;
+  top: 0;
+  left: 0;
 }
