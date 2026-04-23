@@ -6,28 +6,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <link rel="stylesheet" href="style.css">
-
-  <!-- Three.js -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <script type="module" src="script.js" defer></script>
 </head>
 <body>
 
   <div id="ui">
     <div id="time"></div>
-    <button onclick="getLocationWeather()">現在地</button>
+
+    <div id="weatherBox">
+      <div id="weatherText">---</div>
+      <div id="temp"></div>
+    </div>
 
     <div id="wind">
       <div id="arrow">↑</div>
       <div id="speed"></div>
     </div>
-
-    <div id="info">
-      <p id="temp"></p>
-    </div>
   </div>
 
   <canvas id="rainCanvas"></canvas>
-
-<script type="module" src="script.js"></script>
 </body>
 </html>
