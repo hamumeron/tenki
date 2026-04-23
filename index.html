@@ -4,22 +4,19 @@
   <meta charset="UTF-8">
   <title>天気</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body id="body">
 
   <div class="container">
     <h1>天気</h1>
 
-    <div class="search">
-      <input type="text" id="city" placeholder="都市名">
-      <button onclick="getWeather()">検索</button>
-    </div>
+    <div id="time" class="time"></div>
+
+    <button onclick="getLocationWeather()">📍 現在地の天気</button>
 
     <div id="card" class="card hidden">
-      <h2 id="cityName"></h2>
-      <img id="icon" />
+      <h2 id="cityName">現在地</h2>
       <p id="temp"></p>
       <p id="desc"></p>
       <p id="extra"></p>
