@@ -6,30 +6,20 @@ body {
   margin: 0;
   font-family: 'Segoe UI', sans-serif;
   height: 100vh;
+  background: linear-gradient(135deg, #667eea, #764ba2);
   display: flex;
   justify-content: center;
   align-items: center;
   color: white;
-  transition: background 0.8s ease;
 }
-
-/* 背景パターン */
-body.clear { background: linear-gradient(135deg, #4facfe, #00f2fe); }
-body.clouds { background: linear-gradient(135deg, #757f9a, #d7dde8); }
-body.rain { background: linear-gradient(135deg, #314755, #26a0da); }
-body.snow { background: linear-gradient(135deg, #e6dada, #274046); }
-body.night { background: linear-gradient(135deg, #141e30, #243b55); }
 
 .container {
   text-align: center;
   width: 300px;
 }
 
-.time {
-  font-size: 32px;
-  margin-bottom: 10px;
-  font-weight: bold;
-  letter-spacing: 2px;
+h1 {
+  margin-bottom: 20px;
 }
 
 .search {
