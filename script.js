@@ -1,15 +1,124 @@
-window.onload = () => {
-  updateTime();
-  setInterval(updateTime, 1000);
-  getLocationWeather();
-};
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
 
-function updateTime() {
-  const now = new Date();
+let width, height;
+let clouds = [];
+let rainDrops = [];
+let weatherType = "clear";
+let wind = 0;
+
+const rainSound = document.getElementById("rainSound");
+const thunderSound = document.getElementById("thunderSound");
+let soundOn = false;
+
+// 初期化
+function resize() {
+  width = canvas.width = window.innerWidth;
+  height = canvas.height = window.innerHeight;
+}
+window.onresize = resize;
+resize();
+
+// 時刻
+setInterval(() => {
   document.getElementById("time").textContent =
-    now.toLocaleTimeString("ja-JP");
+    new Date().toLocaleTimeString("ja-JP");
+}, 1000);
+
+// 雲生成
+function createClouds() {
+  clouds = [];
+  for (let i = 0; i < 20; i++) {
+    clouds.push({
+      x: Math.random() * width,
+      y: Math.random() * height / 2,
+      size: 50 + Math.random() * 100,
+      speed: 0.2 + Math.random()
+    });
+  }
 }
 
+// 雨生成
+function createRain() {
+  rainDrops = [];
+  for (let i = 0; i < 300; i++) {
+    rainDrops.push({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      len: 10 + Math.random() * 20,
+      speed: 4 + Math.random() * 4
+    });
+  }
+}
+
+// 描画
+function draw() {
+  ctx.clearRect(0, 0, width, height);
+
+  // 雲
+  if (weatherType === "clouds" || weatherType === "clear") {
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    clouds.forEach(c => {
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, c.size, 0, Math.PI * 2);
+      ctx.fill();
+
+      c.x += c.speed;
+      if (c.x > width + 100) c.x = -100;
+    });
+  }
+
+  // 雨
+  if (weatherType === "rain" || weatherType === "thunder") {
+    ctx.strokeStyle = "rgba(255,255,255,0.6)";
+    ctx.lineWidth = 1;
+
+    rainDrops.forEach(r => {
+      ctx.beginPath();
+      ctx.moveTo(r.x, r.y);
+      ctx.lineTo(r.x + wind, r.y + r.len);
+      ctx.stroke();
+
+      r.x += wind * 0.1;
+      r.y += r.speed;
+
+      if (r.y > height) {
+        r.y = -10;
+        r.x = Math.random() * width;
+      }
+    });
+  }
+
+  requestAnimationFrame(draw);
+}
+
+// 雷
+function lightning() {
+  if (weatherType !== "thunder") return;
+
+  if (Math.random() < 0.01) {
+    document.body.style.background = "white";
+
+    if (soundOn) thunderSound.play();
+
+    setTimeout(() => {
+      document.body.style.background = "black";
+    }, 100);
+  }
+}
+
+// 音切替
+function toggleSound() {
+  soundOn = !soundOn;
+
+  if (soundOn && weatherType === "rain") {
+    rainSound.play();
+  } else {
+    rainSound.pause();
+  }
+}
+
+// 天気取得（Open-Meteo）
 function getLocationWeather() {
   navigator.geolocation.getCurrentPosition(pos => {
     fetchWeather(pos.coords.latitude, pos.coords.longitude);
@@ -18,47 +127,30 @@ function getLocationWeather() {
 
 async function fetchWeather(lat, lon) {
   const res = await fetch(
-    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=Asia%2FTokyo`
+    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`
   );
   const data = await res.json();
 
-  updateUI(data.current_weather);
-}
+  const code = data.current_weather.weathercode;
+  wind = data.current_weather.windspeed / 2;
 
-function getWeatherText(code) {
-  if (code === 0) return "快晴";
-  if (code <= 3) return "晴れ";
-  if (code <= 48) return "曇り";
-  if (code <= 67) return "雨";
-  if (code <= 77) return "雪";
-  if (code <= 99) return "雷雨";
-}
+  if (code === 0) weatherType = "clear";
+  else if (code <= 3) weatherType = "clear";
+  else if (code <= 48) weatherType = "clouds";
+  else if (code <= 67) weatherType = "rain";
+  else weatherType = "thunder";
 
-function updateUI(w) {
+  if (weatherType === "rain" && soundOn) rainSound.play();
+  else rainSound.pause();
+
+  createClouds();
+  createRain();
+
   document.getElementById("card").classList.remove("hidden");
-
-  document.getElementById("temp").textContent = `🌡 ${w.temperature}℃`;
-  document.getElementById("desc").textContent = getWeatherText(w.weathercode);
-  document.getElementById("extra").textContent = `🌬 ${w.windspeed} km/h`;
-
-  setBackground(w.weathercode);
+  document.getElementById("temp").textContent =
+    `🌡 ${data.current_weather.temperature}℃`;
 }
 
-function setBackground(code) {
-  const body = document.getElementById("body");
-  body.className = "";
-
-  const hour = new Date().getHours();
-
-  if (hour < 6 || hour > 18) {
-    body.classList.add("night");
-    return;
-  }
-
-  if (code === 0) body.classList.add("clear");
-  else if (code <= 3) body.classList.add("clear");
-  else if (code <= 48) body.classList.add("clouds");
-  else if (code <= 67) body.classList.add("rain");
-  else if (code <= 77) body.classList.add("clouds");
-  else body.classList.add("thunder");
-}
+// ループ
+setInterval(lightning, 100);
+draw();
