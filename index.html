@@ -8,185 +8,329 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --glass: rgba(255,255,255,0.12);
-      --glass-border: rgba(255,255,255,0.2);
-      --text: rgba(255,255,255,0.95);
-      --text-sub: rgba(255,255,255,0.7);
+      --glass: rgba(255,255,255,0.13);
+      --glass-border: rgba(255,255,255,0.22);
+      --text: rgba(255,255,255,0.96);
+      --text-sub: rgba(255,255,255,0.68);
+      --cube-duration: 0.7s;
     }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
-      min-height: 100vh;
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
       color: var(--text);
       overflow-x: hidden;
-      position: relative;
-      transition: background 1.5s ease;
+      background: #1a90d8;
     }
 
     #bgCanvas {
-      position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 0;
+      position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0;
+    }
+    #rainCanvas {
+      position: fixed; inset: 0; pointer-events: none; z-index: 5;
     }
 
-    #app {
+    /* ─── LOCATION TABS ─── */
+    #locTabs {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 14px 16px 10px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.25), transparent);
+    }
+
+    .loc-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.4);
+      cursor: pointer;
+      transition: all 0.3s;
+      border: 1.5px solid rgba(255,255,255,0.5);
+    }
+    .loc-dot.active { background: #fff; width: 22px; border-radius: 4px; }
+    .loc-dot.add-btn {
+      background: transparent;
+      border: 1.5px dashed rgba(255,255,255,0.5);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; color: rgba(255,255,255,0.6);
+      width: 22px; height: 22px; border-radius: 50%;
+    }
+    .loc-dot.add-btn:hover { background: rgba(255,255,255,0.15); }
+
+    /* ─── CUBE STAGE ─── */
+    #stage {
       position: relative;
       z-index: 10;
+      width: 100%;
       min-height: 100vh;
+      perspective: 1200px;
+      overflow: hidden;
+    }
+
+    #cube {
+      width: 100%;
+      min-height: 100vh;
+      transform-style: preserve-3d;
+      transition: transform var(--cube-duration) cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+
+    .cube-face {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      min-height: 100vh;
+      backface-visibility: hidden;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 0 16px 40px;
+      padding: 70px 16px 40px;
     }
 
+    /* face positions — we rotate Y axis: 0°, -90°, -180°, -270° */
+    .face-0 { transform: rotateY(0deg)   translateZ(0px); }
+    .face-1 { transform: rotateY(90deg)  translateZ(0px); }
+    .face-2 { transform: rotateY(180deg) translateZ(0px); }
+    .face-3 { transform: rotateY(270deg) translateZ(0px); }
+
+    /* ─── SWIPE HINT ─── */
+    .swipe-hint {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+      font-size: 11px;
+      color: rgba(255,255,255,0.45);
+      pointer-events: none;
+      letter-spacing: 0.5px;
+    }
+
+    /* ─── SEARCH BAR ─── */
     .search-bar {
-      margin: 20px auto 0;
-      width: 100%;
-      max-width: 500px;
-      display: flex;
-      gap: 10px;
-      align-items: center;
+      width: 100%; max-width: 500px;
+      display: flex; gap: 8px; align-items: center;
+      margin-bottom: 18px;
     }
 
-    .search-bar input {
+    .search-wrap {
       flex: 1;
-      padding: 12px 20px;
-      border-radius: 100px;
-      border: 1.5px solid var(--glass-border);
-      background: var(--glass);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      color: #fff;
-      font-size: 16px;
-      outline: none;
-      transition: border-color 0.2s;
+      position: relative;
     }
 
-    .search-bar input::placeholder { color: rgba(255,255,255,0.5); }
-    .search-bar input:focus { border-color: rgba(255,255,255,0.6); }
-
-    .search-bar button {
-      padding: 12px 22px;
+    .search-wrap input {
+      width: 100%;
+      padding: 13px 20px;
       border-radius: 100px;
       border: 1.5px solid var(--glass-border);
       background: var(--glass);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
       color: #fff;
       font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s, background 0.2s;
+      font-family: inherit;
+    }
+    .search-wrap input::placeholder { color: rgba(255,255,255,0.45); }
+    .search-wrap input:focus { border-color: rgba(255,255,255,0.65); background: rgba(255,255,255,0.18); }
+
+    /* autocomplete */
+    .ac-list {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0; right: 0;
+      background: rgba(30,40,60,0.92);
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(30px);
+      border-radius: 14px;
+      overflow: hidden;
+      z-index: 200;
+      border: 1px solid rgba(255,255,255,0.12);
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    .ac-item {
+      padding: 11px 18px;
+      cursor: pointer;
+      font-size: 14px;
+      color: rgba(255,255,255,0.88);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      display: flex; align-items: center; gap: 10px;
+      transition: background 0.15s;
+    }
+    .ac-item:last-child { border-bottom: none; }
+    .ac-item:hover { background: rgba(255,255,255,0.12); }
+    .ac-item .ac-icon { font-size: 16px; flex-shrink: 0; }
+    .ac-item .ac-main { font-size: 14px; }
+    .ac-item .ac-sub { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 1px; }
+
+    .search-btn {
+      padding: 13px 20px;
+      border-radius: 100px;
+      border: 1.5px solid var(--glass-border);
+      background: var(--glass);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      color: #fff;
+      font-size: 14px;
       cursor: pointer;
       transition: background 0.2s;
       white-space: nowrap;
+      font-family: inherit;
     }
+    .search-btn:hover { background: rgba(255,255,255,0.22); }
+    .search-btn:active { transform: scale(0.97); }
 
-    .search-bar button:hover { background: rgba(255,255,255,0.2); }
-
+    /* ─── MAIN CARD ─── */
     .main-card {
-      margin-top: 24px;
-      width: 100%;
-      max-width: 500px;
+      width: 100%; max-width: 500px;
       background: var(--glass);
-      backdrop-filter: blur(30px);
-      -webkit-backdrop-filter: blur(30px);
+      backdrop-filter: blur(32px);
+      -webkit-backdrop-filter: blur(32px);
       border: 1.5px solid var(--glass-border);
       border-radius: 28px;
-      padding: 32px 28px 28px;
+      padding: 28px 28px 24px;
       text-align: center;
+      margin-bottom: 14px;
     }
 
-    .city-name { font-size: 26px; font-weight: 600; letter-spacing: -0.3px; }
-    .current-temp { font-size: 96px; font-weight: 200; line-height: 1; margin: 8px 0 4px; letter-spacing: -4px; }
-    .weather-desc { font-size: 20px; color: var(--text-sub); font-weight: 400; margin-bottom: 4px; }
-    .temp-range { font-size: 16px; color: var(--text-sub); margin-bottom: 20px; }
+    .city-name { font-size: 24px; font-weight: 600; letter-spacing: -0.2px; }
+    .current-temp { font-size: 92px; font-weight: 200; line-height: 1; margin: 6px 0 2px; letter-spacing: -4px; }
+    .weather-desc { font-size: 19px; color: var(--text-sub); margin-bottom: 3px; }
+    .temp-range { font-size: 15px; color: var(--text-sub); margin-bottom: 18px; }
 
     .stats-row {
       display: flex;
       justify-content: space-around;
       border-top: 1px solid var(--glass-border);
-      padding-top: 18px;
-      margin-top: 4px;
+      padding-top: 16px;
     }
-
     .stat { text-align: center; }
-    .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-sub); margin-bottom: 4px; }
-    .stat-value { font-size: 20px; font-weight: 500; }
+    .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.7px; color: var(--text-sub); margin-bottom: 3px; }
+    .stat-value { font-size: 19px; font-weight: 500; }
 
-    .hourly-card {
-      margin-top: 16px;
-      width: 100%;
-      max-width: 500px;
+    /* ─── HOURLY ─── */
+    .card {
+      width: 100%; max-width: 500px;
       background: var(--glass);
-      backdrop-filter: blur(30px);
-      -webkit-backdrop-filter: blur(30px);
+      backdrop-filter: blur(32px);
+      -webkit-backdrop-filter: blur(32px);
       border: 1.5px solid var(--glass-border);
       border-radius: 20px;
-      padding: 18px 20px;
-      overflow-x: auto;
+      padding: 16px 18px;
+      margin-bottom: 12px;
     }
 
-    .card-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-sub); margin-bottom: 14px; }
+    .card-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.7px; color: var(--text-sub); margin-bottom: 12px; }
 
-    .hourly-row { display: flex; gap: 20px; min-width: max-content; }
+    .hourly-row { display: flex; gap: 18px; overflow-x: auto; padding-bottom: 4px; }
+    .hourly-row::-webkit-scrollbar { height: 2px; }
+    .hourly-row::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
 
-    .hour-item { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 48px; }
-    .hour-time { font-size: 13px; color: var(--text-sub); }
-    .hour-icon { font-size: 24px; }
-    .hour-temp { font-size: 16px; font-weight: 500; }
-    .hour-rain { font-size: 11px; color: #7ec8ff; }
+    .hour-item { display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 46px; }
+    .hour-time { font-size: 12px; color: var(--text-sub); }
+    .hour-icon { font-size: 22px; }
+    .hour-temp { font-size: 15px; font-weight: 500; }
+    .hour-rain { font-size: 10px; color: #7ec8ff; }
 
-    .daily-card {
-      margin-top: 16px;
-      width: 100%;
-      max-width: 500px;
-      background: var(--glass);
-      backdrop-filter: blur(30px);
-      -webkit-backdrop-filter: blur(30px);
-      border: 1.5px solid var(--glass-border);
-      border-radius: 20px;
-      padding: 18px 20px;
-    }
-
-    .daily-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    /* ─── DAILY ─── */
+    .daily-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.07); }
     .daily-row:last-child { border-bottom: none; }
-    .daily-day { flex: 1; font-size: 16px; }
-    .daily-icon { font-size: 22px; }
-    .daily-bar-wrap { flex: 2; display: flex; align-items: center; gap: 8px; }
-    .daily-bar-bg { flex: 1; height: 4px; border-radius: 4px; background: rgba(255,255,255,0.15); position: relative; overflow: hidden; }
+    .daily-day { flex: 1; font-size: 15px; }
+    .daily-icon { font-size: 20px; }
+    .daily-bar-wrap { flex: 2; display: flex; align-items: center; gap: 6px; }
+    .daily-bar-bg { flex: 1; height: 4px; border-radius: 4px; background: rgba(255,255,255,0.14); overflow: hidden; }
     .daily-bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #7ec8ff, #ffb347); }
-    .daily-lo { font-size: 14px; color: var(--text-sub); min-width: 28px; text-align: right; }
-    .daily-hi { font-size: 14px; font-weight: 500; min-width: 28px; text-align: right; }
+    .daily-lo { font-size: 13px; color: var(--text-sub); min-width: 26px; text-align: right; }
+    .daily-hi { font-size: 13px; font-weight: 500; min-width: 26px; text-align: right; }
 
-    .extra-grid {
-      margin-top: 16px;
-      width: 100%;
-      max-width: 500px;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
+    /* ─── EXTRA GRID ─── */
+    .extra-grid { width: 100%; max-width: 500px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
     .extra-card {
       background: var(--glass);
-      backdrop-filter: blur(30px);
-      -webkit-backdrop-filter: blur(30px);
+      backdrop-filter: blur(32px);
+      -webkit-backdrop-filter: blur(32px);
       border: 1.5px solid var(--glass-border);
-      border-radius: 20px;
-      padding: 18px;
+      border-radius: 18px;
+      padding: 16px;
     }
+    .extra-value { font-size: 30px; font-weight: 300; margin-top: 4px; }
+    .extra-sub { font-size: 12px; color: var(--text-sub); margin-top: 3px; }
 
-    .extra-card .card-label { margin-bottom: 8px; }
-    .extra-value { font-size: 32px; font-weight: 300; }
-    .extra-sub { font-size: 13px; color: var(--text-sub); margin-top: 4px; }
+    /* ─── DELETE BUTTON ─── */
+    .delete-btn {
+      margin-top: 4px;
+      padding: 9px 24px;
+      border-radius: 100px;
+      border: 1.5px solid rgba(255,100,100,0.4);
+      background: rgba(255,60,60,0.1);
+      color: rgba(255,160,160,0.9);
+      font-size: 13px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.2s;
+    }
+    .delete-btn:hover { background: rgba(255,60,60,0.22); }
 
-    .status-msg { margin-top: 60px; font-size: 18px; color: var(--text-sub); text-align: center; }
+    /* ─── STATUS ─── */
+    .status-msg { margin-top: 80px; font-size: 18px; color: var(--text-sub); text-align: center; line-height: 1.7; }
+    .status-msg span { font-size: 40px; display: block; margin-bottom: 12px; }
 
-    #rainCanvas { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+    /* ─── MODAL OVERLAY ─── */
+    #modal {
+      display: none;
+      position: fixed; inset: 0; z-index: 300;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      align-items: center; justify-content: center;
+    }
+    #modal.open { display: flex; }
 
-    .hourly-card::-webkit-scrollbar { height: 3px; }
-    .hourly-card::-webkit-scrollbar-track { background: transparent; }
-    .hourly-card::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); border-radius: 3px; }
+    .modal-box {
+      background: rgba(20,30,50,0.95);
+      border: 1.5px solid rgba(255,255,255,0.15);
+      border-radius: 24px;
+      padding: 28px 24px;
+      width: 90%; max-width: 400px;
+    }
+    .modal-title { font-size: 18px; font-weight: 600; margin-bottom: 16px; text-align: center; }
+    .modal-input-wrap { position: relative; margin-bottom: 12px; }
+    .modal-input {
+      width: 100%;
+      padding: 13px 18px;
+      border-radius: 12px;
+      border: 1.5px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      font-size: 15px;
+      outline: none;
+      font-family: inherit;
+    }
+    .modal-input::placeholder { color: rgba(255,255,255,0.35); }
+    .modal-input:focus { border-color: rgba(255,255,255,0.5); }
+    .modal-ac { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 400; }
+
+    .modal-actions { display: flex; gap: 10px; margin-top: 6px; }
+    .modal-btn {
+      flex: 1; padding: 13px;
+      border-radius: 12px;
+      border: 1.5px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      font-size: 15px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.2s;
+    }
+    .modal-btn.primary { background: rgba(255,255,255,0.2); font-weight: 600; }
+    .modal-btn:hover { background: rgba(255,255,255,0.25); }
+    .modal-btn.loc-btn { font-size: 13px; }
   </style>
 </head>
 <body>
@@ -194,427 +338,804 @@
 <canvas id="bgCanvas"></canvas>
 <canvas id="rainCanvas"></canvas>
 
-<div id="app">
-  <div class="search-bar">
-    <input id="cityInput" type="text" placeholder="都市名を入力 (例: Tokyo)" value="" />
-    <button onclick="searchCity()">検索</button>
-    <button onclick="getMyLocation()">現在地</button>
+<div id="locTabs"></div>
+
+<div id="stage">
+  <div id="cube">
+    <div class="cube-face face-0" id="face-0"></div>
+    <div class="cube-face face-1" id="face-1"></div>
+    <div class="cube-face face-2" id="face-2"></div>
+    <div class="cube-face face-3" id="face-3"></div>
   </div>
-  <div id="content">
-    <p class="status-msg">都市名を入力するか、現在地ボタンを押してください。</p>
+</div>
+
+<div class="swipe-hint">← スワイプで切り替え →</div>
+
+<!-- ADD LOCATION MODAL -->
+<div id="modal">
+  <div class="modal-box">
+    <div class="modal-title">場所を追加</div>
+    <div class="modal-input-wrap">
+      <input class="modal-input" id="modalInput" type="text" placeholder="例: 埼玉県川越市、渋谷区、大阪市" autocomplete="off" />
+      <div class="ac-list modal-ac" id="modalAc" style="display:none"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn loc-btn" onclick="addCurrentLocation()">📍 現在地</button>
+      <button class="modal-btn" onclick="closeModal()">キャンセル</button>
+      <button class="modal-btn primary" onclick="confirmAdd()">追加</button>
+    </div>
   </div>
 </div>
 
 <script>
+/* ═══════════════════════════════════════════
+   WEATHER CODE MAP
+═══════════════════════════════════════════ */
 const WMO = {
-  0:  { icon:'☀️', desc:'快晴',         theme:'sunny'   },
-  1:  { icon:'🌤', desc:'ほぼ晴れ',     theme:'sunny'   },
-  2:  { icon:'⛅', desc:'一部曇り',     theme:'partly'  },
-  3:  { icon:'☁️', desc:'曇り',         theme:'cloudy'  },
-  45: { icon:'🌫', desc:'霧',           theme:'foggy'   },
-  48: { icon:'🌫', desc:'霧（着氷）',   theme:'foggy'   },
-  51: { icon:'🌦', desc:'霧雨（弱）',   theme:'rainy'   },
-  53: { icon:'🌦', desc:'霧雨',         theme:'rainy'   },
-  55: { icon:'🌧', desc:'霧雨（強）',   theme:'rainy'   },
-  61: { icon:'🌧', desc:'小雨',         theme:'rainy'   },
-  63: { icon:'🌧', desc:'雨',           theme:'rainy'   },
-  65: { icon:'🌧', desc:'大雨',         theme:'rainy'   },
-  71: { icon:'🌨', desc:'小雪',         theme:'snowy'   },
-  73: { icon:'❄️', desc:'雪',           theme:'snowy'   },
-  75: { icon:'❄️', desc:'大雪',         theme:'snowy'   },
-  80: { icon:'🌦', desc:'にわか雨',     theme:'rainy'   },
-  81: { icon:'🌧', desc:'雨（強め）',   theme:'rainy'   },
-  82: { icon:'🌧', desc:'激しい雨',     theme:'rainy'   },
-  85: { icon:'🌨', desc:'にわか雪',     theme:'snowy'   },
-  86: { icon:'❄️', desc:'激しい雪',     theme:'snowy'   },
-  95: { icon:'⛈', desc:'雷雨',         theme:'thunder' },
-  96: { icon:'⛈', desc:'雷雨＋ひょう', theme:'thunder' },
-  99: { icon:'⛈', desc:'激しい雷雨',   theme:'thunder' },
+  0:{icon:'☀️',desc:'快晴',theme:'sunny'},
+  1:{icon:'🌤',desc:'ほぼ晴れ',theme:'sunny'},
+  2:{icon:'⛅',desc:'一部曇り',theme:'partly'},
+  3:{icon:'☁️',desc:'曇り',theme:'cloudy'},
+  45:{icon:'🌫',desc:'霧',theme:'foggy'},
+  48:{icon:'🌫',desc:'霧（着氷）',theme:'foggy'},
+  51:{icon:'🌦',desc:'霧雨（弱）',theme:'rainy'},
+  53:{icon:'🌦',desc:'霧雨',theme:'rainy'},
+  55:{icon:'🌧',desc:'霧雨（強）',theme:'rainy'},
+  61:{icon:'🌧',desc:'小雨',theme:'rainy'},
+  63:{icon:'🌧',desc:'雨',theme:'rainy'},
+  65:{icon:'🌧',desc:'大雨',theme:'rainy'},
+  71:{icon:'🌨',desc:'小雪',theme:'snowy'},
+  73:{icon:'❄️',desc:'雪',theme:'snowy'},
+  75:{icon:'❄️',desc:'大雪',theme:'snowy'},
+  80:{icon:'🌦',desc:'にわか雨',theme:'rainy'},
+  81:{icon:'🌧',desc:'雨（強め）',theme:'rainy'},
+  82:{icon:'🌧',desc:'激しい雨',theme:'rainy'},
+  85:{icon:'🌨',desc:'にわか雪',theme:'snowy'},
+  86:{icon:'❄️',desc:'激しい雪',theme:'snowy'},
+  95:{icon:'⛈',desc:'雷雨',theme:'thunder'},
+  96:{icon:'⛈',desc:'雷雨＋ひょう',theme:'thunder'},
+  99:{icon:'⛈',desc:'激しい雷雨',theme:'thunder'},
 };
-
-function getWmo(code){ return WMO[code] || { icon:'🌡', desc:'不明', theme:'cloudy' }; }
+function getWmo(c){ return WMO[c] || {icon:'🌡',desc:'不明',theme:'cloudy'}; }
 
 const THEMES = {
-  sunny:  { bg1:'#1a90d8', bg2:'#74c0f0' },
-  partly: { bg1:'#3a7fb5', bg2:'#94b8d4' },
-  cloudy: { bg1:'#4a5568', bg2:'#718096' },
-  foggy:  { bg1:'#6b7280', bg2:'#9ca3af' },
-  rainy:  { bg1:'#1e3a5f', bg2:'#2d5f8a' },
-  snowy:  { bg1:'#a8c0cc', bg2:'#dce8ef' },
-  thunder:{ bg1:'#1a1a2e', bg2:'#16213e' },
+  sunny:  {bg1:'#1a90d8',bg2:'#74c0f0'},
+  partly: {bg1:'#3a7fb5',bg2:'#94b8d4'},
+  cloudy: {bg1:'#4a5568',bg2:'#718096'},
+  foggy:  {bg1:'#6b7280',bg2:'#9ca3af'},
+  rainy:  {bg1:'#1e3a5f',bg2:'#2d5f8a'},
+  snowy:  {bg1:'#a8c0cc',bg2:'#dce8ef'},
+  thunder:{bg1:'#1a1a2e',bg2:'#16213e'},
 };
 
-let currentTheme = 'sunny';
-let animFrame = null;
-let rainAnimFrame = null;
+/* ═══════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════ */
+let locations = JSON.parse(localStorage.getItem('wx_locs') || '[]');
+let currentIdx = 0;
+let isAnimating = false;
+let weatherCache = {};
 
+/* ═══════════════════════════════════════════
+   CANVAS / ANIMATION
+═══════════════════════════════════════════ */
 const bgCanvas = document.getElementById('bgCanvas');
 const bgCtx = bgCanvas.getContext('2d');
 const rainCanvas = document.getElementById('rainCanvas');
 const rainCtx = rainCanvas.getContext('2d');
 
-function resizeCanvases(){
+function resizeC(){
   bgCanvas.width = window.innerWidth; bgCanvas.height = window.innerHeight;
   rainCanvas.width = window.innerWidth; rainCanvas.height = window.innerHeight;
 }
-window.addEventListener('resize', resizeCanvases);
-resizeCanvases();
+window.addEventListener('resize', resizeC);
+resizeC();
 
-const clouds = Array.from({length: 12}, () => ({
-  x: Math.random() * window.innerWidth,
-  y: 60 + Math.random() * 300,
-  r: 60 + Math.random() * 100,
-  speed: 0.15 + Math.random() * 0.3,
-  alpha: 0.08 + Math.random() * 0.14,
-  dark: false,
+const clouds = Array.from({length:14},()=>({
+  x:Math.random()*window.innerWidth, y:50+Math.random()*320,
+  r:55+Math.random()*110, speed:0.12+Math.random()*0.28,
+  alpha:0.07+Math.random()*0.13, dark:false,
+}));
+const stars = Array.from({length:80},()=>({
+  x:Math.random()*1000, y:Math.random()*400,
+  r:0.5+Math.random()*1.2, tw:Math.random()*Math.PI*2,
+}));
+const snowflakes = Array.from({length:110},()=>({
+  x:Math.random()*1000, y:Math.random()*1000,
+  r:1+Math.random()*2.5, vy:0.3+Math.random()*0.7,
+  vx:-0.2+Math.random()*0.5, alpha:0.4+Math.random()*0.5,
+}));
+const rainDrops = Array.from({length:220},()=>({
+  x:Math.random()*1000, y:Math.random()*1000,
+  len:10+Math.random()*20, speed:8+Math.random()*8,
+  alpha:0.15+Math.random()*0.3,
+}));
+const fogLayers = Array.from({length:6},(_, i)=>({
+  y:80+i*85, x:Math.random()*600,
+  speed:0.08+i*0.04, alpha:0.05+Math.random()*0.06,
 }));
 
-const stars = Array.from({length: 80}, () => ({
-  x: Math.random() * 1000,
-  y: Math.random() * 400,
-  r: 0.5 + Math.random() * 1.2,
-  tw: Math.random() * Math.PI * 2,
-}));
+let curTheme = 'sunny';
+let animFrame = null, rainAnimFrame = null;
+let lightningTimer = 0, lightningFlash = 0;
 
-const snowflakes = Array.from({length: 100}, () => ({
-  x: Math.random() * 1000,
-  y: Math.random() * 1000,
-  r: 1 + Math.random() * 3,
-  vy: 0.3 + Math.random() * 0.8,
-  vx: -0.3 + Math.random() * 0.6,
-  alpha: 0.4 + Math.random() * 0.5,
-}));
-
-let lightningTimer = 0;
-let lightningFlash = 0;
-
-function drawLightning(ctx, x, y, len, branches){
+function drawLightning(ctx,x,y,len,branches){
   ctx.save();
-  ctx.strokeStyle = `rgba(220,220,255,${0.8 + Math.random()*0.2})`;
-  ctx.lineWidth = 1.5;
-  ctx.shadowColor = '#aad4ff';
-  ctx.shadowBlur = 12;
-  ctx.beginPath();
-  ctx.moveTo(x, y);
-  let cx = x, cy = y;
-  for(let i = 0; i < 10; i++){
-    cx += -20 + Math.random()*40;
-    cy += len/10;
-    ctx.lineTo(cx, cy);
-  }
+  ctx.strokeStyle=`rgba(220,220,255,${0.8+Math.random()*0.2})`;
+  ctx.lineWidth=1.5; ctx.shadowColor='#aad4ff'; ctx.shadowBlur=14;
+  ctx.beginPath(); ctx.moveTo(x,y);
+  let cx=x,cy=y;
+  for(let i=0;i<10;i++){ cx+=-20+Math.random()*40; cy+=len/10; ctx.lineTo(cx,cy); }
   ctx.stroke();
-  if(branches > 0) drawLightning(ctx, cx, cy - len*0.3, len*0.5, branches-1);
+  if(branches>0) drawLightning(ctx,cx,cy-len*0.3,len*0.5,branches-1);
   ctx.restore();
 }
 
-const rainDrops = Array.from({length: 200}, () => ({
-  x: Math.random() * 1000,
-  y: Math.random() * 1000,
-  len: 10 + Math.random() * 20,
-  speed: 8 + Math.random() * 8,
-  alpha: 0.15 + Math.random() * 0.35,
-}));
-
-const fogLayers = Array.from({length: 5}, (_, i) => ({
-  y: 100 + i * 80,
-  x: Math.random() * 600,
-  speed: 0.1 + i * 0.05,
-  alpha: 0.06 + Math.random() * 0.06,
-}));
-
 function drawRain(){
   if(rainAnimFrame) cancelAnimationFrame(rainAnimFrame);
-  const isRain = currentTheme === 'rainy' || currentTheme === 'thunder';
-  if(!isRain){ rainCtx.clearRect(0,0,rainCanvas.width,rainCanvas.height); return; }
+  const isR = curTheme==='rainy'||curTheme==='thunder';
+  if(!isR){ rainCtx.clearRect(0,0,rainCanvas.width,rainCanvas.height); return; }
   function loop(){
     rainCtx.clearRect(0,0,rainCanvas.width,rainCanvas.height);
-    rainDrops.forEach(d => {
-      d.y += d.speed; d.x += 1;
-      if(d.y > rainCanvas.height){ d.y = -d.len; d.x = Math.random()*rainCanvas.width; }
+    rainDrops.forEach(d=>{
+      d.y+=d.speed; d.x+=1;
+      if(d.y>rainCanvas.height){ d.y=-d.len; d.x=Math.random()*rainCanvas.width; }
       rainCtx.save();
-      rainCtx.strokeStyle = `rgba(180,210,255,${d.alpha})`;
-      rainCtx.lineWidth = 1;
+      rainCtx.strokeStyle=`rgba(180,210,255,${d.alpha})`;
+      rainCtx.lineWidth=1;
       rainCtx.beginPath();
-      rainCtx.moveTo(d.x, d.y);
-      rainCtx.lineTo(d.x + d.len*0.15, d.y + d.len);
-      rainCtx.stroke();
-      rainCtx.restore();
+      rainCtx.moveTo(d.x,d.y);
+      rainCtx.lineTo(d.x+d.len*0.15,d.y+d.len);
+      rainCtx.stroke(); rainCtx.restore();
     });
-    rainAnimFrame = requestAnimationFrame(loop);
+    rainAnimFrame=requestAnimationFrame(loop);
   }
   loop();
 }
 
-function applyThemeAnimation(theme){
-  currentTheme = theme;
+function applyTheme(theme){
+  curTheme=theme;
   if(animFrame) cancelAnimationFrame(animFrame);
-  const dark = theme === 'cloudy' || theme === 'foggy';
-  clouds.forEach(c => { c.dark = dark; });
-  const cfg = THEMES[theme] || THEMES.sunny;
-  document.body.style.background = `linear-gradient(170deg,${cfg.bg1} 0%,${cfg.bg2} 100%)`;
+  const dark=theme==='cloudy'||theme==='foggy';
+  clouds.forEach(c=>{c.dark=dark;});
+  const cfg=THEMES[theme]||THEMES.sunny;
+  document.body.style.background=`linear-gradient(170deg,${cfg.bg1} 0%,${cfg.bg2} 100%)`;
 
   function frame(ts){
-    const W = bgCanvas.width, H = bgCanvas.height;
+    const W=bgCanvas.width, H=bgCanvas.height;
     bgCtx.clearRect(0,0,W,H);
-    const grad = bgCtx.createLinearGradient(0,0,0,H);
-    grad.addColorStop(0, cfg.bg1);
-    grad.addColorStop(1, cfg.bg2);
-    bgCtx.fillStyle = grad;
-    bgCtx.fillRect(0,0,W,H);
+    const g=bgCtx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,cfg.bg1); g.addColorStop(1,cfg.bg2);
+    bgCtx.fillStyle=g; bgCtx.fillRect(0,0,W,H);
 
-    if(theme === 'sunny' || theme === 'partly'){
-      const sx = W * 0.75, sy = H * 0.12;
-      const sunGrad = bgCtx.createRadialGradient(sx,sy,0,sx,sy,120);
-      sunGrad.addColorStop(0,'rgba(255,255,200,0.7)');
-      sunGrad.addColorStop(0.3,'rgba(255,220,80,0.35)');
-      sunGrad.addColorStop(1,'rgba(255,200,50,0)');
-      bgCtx.fillStyle = sunGrad;
-      bgCtx.beginPath();
-      bgCtx.arc(sx,sy,120,0,Math.PI*2);
-      bgCtx.fill();
-      bgCtx.save();
-      bgCtx.translate(sx,sy);
+    if(theme==='sunny'||theme==='partly'){
+      const sx=W*0.75,sy=H*0.11;
+      const sg=bgCtx.createRadialGradient(sx,sy,0,sx,sy,130);
+      sg.addColorStop(0,'rgba(255,255,200,0.72)');
+      sg.addColorStop(0.3,'rgba(255,220,80,0.36)');
+      sg.addColorStop(1,'rgba(255,200,50,0)');
+      bgCtx.fillStyle=sg; bgCtx.beginPath(); bgCtx.arc(sx,sy,130,0,Math.PI*2); bgCtx.fill();
+      bgCtx.save(); bgCtx.translate(sx,sy);
       for(let i=0;i<12;i++){
-        bgCtx.save();
-        bgCtx.rotate(i*Math.PI/6 + ts*0.0003);
-        bgCtx.fillStyle = 'rgba(255,235,100,0.08)';
-        bgCtx.beginPath();
-        bgCtx.moveTo(0,0);
-        bgCtx.lineTo(-8, 200);
-        bgCtx.lineTo(8, 200);
-        bgCtx.closePath();
-        bgCtx.fill();
-        bgCtx.restore();
+        bgCtx.save(); bgCtx.rotate(i*Math.PI/6+ts*0.00025);
+        bgCtx.fillStyle='rgba(255,235,100,0.07)';
+        bgCtx.beginPath(); bgCtx.moveTo(0,0); bgCtx.lineTo(-9,210); bgCtx.lineTo(9,210);
+        bgCtx.closePath(); bgCtx.fill(); bgCtx.restore();
       }
       bgCtx.restore();
     }
 
-    clouds.forEach(c => {
-      c.x += c.speed * (theme === 'thunder' ? 1.8 : 1);
-      if(c.x - c.r > W + 200) c.x = -c.r - 200;
-      const cg = bgCtx.createRadialGradient(c.x,c.y,0,c.x,c.y,c.r);
-      const col = theme === 'thunder' ? `rgba(30,35,60,${c.alpha*1.5})` :
-                  dark ? `rgba(80,90,110,${c.alpha*1.2})` :
-                  `rgba(255,255,255,${c.alpha})`;
-      cg.addColorStop(0, col);
-      cg.addColorStop(1, 'rgba(255,255,255,0)');
-      bgCtx.fillStyle = cg;
+    clouds.forEach(c=>{
+      c.x+=c.speed*(theme==='thunder'?1.9:1);
+      if(c.x-c.r>W+200) c.x=-c.r-200;
+      const cg=bgCtx.createRadialGradient(c.x,c.y,0,c.x,c.y,c.r);
+      const col=theme==='thunder'?`rgba(28,32,58,${c.alpha*1.6})`:
+                dark?`rgba(78,88,108,${c.alpha*1.2})`:`rgba(255,255,255,${c.alpha})`;
+      cg.addColorStop(0,col); cg.addColorStop(1,'rgba(255,255,255,0)');
+      bgCtx.fillStyle=cg;
       bgCtx.beginPath(); bgCtx.arc(c.x,c.y,c.r,0,Math.PI*2); bgCtx.fill();
-      bgCtx.beginPath(); bgCtx.arc(c.x+c.r*0.45, c.y+10, c.r*0.65, 0, Math.PI*2); bgCtx.fill();
-      bgCtx.beginPath(); bgCtx.arc(c.x-c.r*0.4, c.y+15, c.r*0.55, 0, Math.PI*2); bgCtx.fill();
+      bgCtx.beginPath(); bgCtx.arc(c.x+c.r*0.46,c.y+10,c.r*0.64,0,Math.PI*2); bgCtx.fill();
+      bgCtx.beginPath(); bgCtx.arc(c.x-c.r*0.4,c.y+15,c.r*0.54,0,Math.PI*2); bgCtx.fill();
     });
 
-    if(theme === 'thunder'){
+    if(theme==='thunder'){
       lightningTimer++;
-      if(lightningFlash > 0){
-        bgCtx.fillStyle = `rgba(180,180,255,${lightningFlash * 0.04})`;
-        bgCtx.fillRect(0,0,W,H);
-        lightningFlash -= 2;
+      if(lightningFlash>0){
+        bgCtx.fillStyle=`rgba(170,170,255,${lightningFlash*0.038})`;
+        bgCtx.fillRect(0,0,W,H); lightningFlash-=2;
       }
-      if(lightningTimer > 180 + Math.random()*240){
-        lightningTimer = 0;
-        lightningFlash = 20;
-        drawLightning(bgCtx, W * (0.2 + Math.random()*0.6), 0, H*0.5, 2);
+      if(lightningTimer>170+Math.random()*230){
+        lightningTimer=0; lightningFlash=22;
+        drawLightning(bgCtx,W*(0.2+Math.random()*0.6),0,H*0.52,2);
       }
-      stars.forEach(s => {
-        s.tw += 0.02;
-        const a = 0.4 + Math.sin(s.tw) * 0.3;
-        bgCtx.fillStyle = `rgba(220,230,255,${a})`;
-        bgCtx.beginPath();
-        bgCtx.arc(s.x % W, s.y % (H*0.5), s.r, 0, Math.PI*2);
-        bgCtx.fill();
+      stars.forEach(s=>{
+        s.tw+=0.02;
+        bgCtx.fillStyle=`rgba(220,230,255,${0.4+Math.sin(s.tw)*0.28})`;
+        bgCtx.beginPath(); bgCtx.arc(s.x%W,s.y%(H*0.5),s.r,0,Math.PI*2); bgCtx.fill();
       });
     }
 
-    if(theme === 'snowy'){
-      snowflakes.forEach(s => {
-        s.y += s.vy; s.x += s.vx;
-        if(s.y > H) s.y = -10;
-        if(s.x > W) s.x = 0;
-        if(s.x < 0) s.x = W;
-        bgCtx.fillStyle = `rgba(255,255,255,${s.alpha})`;
-        bgCtx.beginPath();
-        bgCtx.arc(s.x,s.y,s.r,0,Math.PI*2);
-        bgCtx.fill();
+    if(theme==='snowy'){
+      snowflakes.forEach(s=>{
+        s.y+=s.vy; s.x+=s.vx;
+        if(s.y>H) s.y=-10;
+        if(s.x>W) s.x=0; if(s.x<0) s.x=W;
+        bgCtx.fillStyle=`rgba(255,255,255,${s.alpha})`;
+        bgCtx.beginPath(); bgCtx.arc(s.x,s.y,s.r,0,Math.PI*2); bgCtx.fill();
       });
     }
 
-    if(theme === 'foggy'){
-      fogLayers.forEach(f => {
-        f.x += f.speed;
-        if(f.x > W+400) f.x = -400;
-        const fg = bgCtx.createLinearGradient(f.x-200,f.y,f.x+200,f.y);
+    if(theme==='foggy'){
+      fogLayers.forEach(f=>{
+        f.x+=f.speed; if(f.x>W+400) f.x=-400;
+        const fg=bgCtx.createLinearGradient(f.x-200,f.y,f.x+200,f.y);
         fg.addColorStop(0,'rgba(255,255,255,0)');
         fg.addColorStop(0.5,`rgba(200,210,215,${f.alpha})`);
         fg.addColorStop(1,'rgba(255,255,255,0)');
-        bgCtx.fillStyle = fg;
-        bgCtx.fillRect(f.x-200,f.y-15,400,30);
+        bgCtx.fillStyle=fg; bgCtx.fillRect(f.x-200,f.y-16,400,32);
       });
     }
 
-    animFrame = requestAnimationFrame(frame);
+    animFrame=requestAnimationFrame(frame);
   }
-  animFrame = requestAnimationFrame(frame);
+  animFrame=requestAnimationFrame(frame);
   drawRain();
 }
 
-async function geocode(city){
-  const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=ja&format=json`);
-  const d = await r.json();
-  if(!d.results || !d.results.length) throw new Error('都市が見つかりません');
-  return d.results[0];
+/* ═══════════════════════════════════════════
+   JAPANESE GEOCODING
+   Tries Open-Meteo geocoding with JP fallback
+═══════════════════════════════════════════ */
+async function geocodeJP(query){
+  // Nominatim for Japanese addresses (handles 川越市, 埼玉県 etc.)
+  const nom = await fetch(
+    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&countrycodes=jp&limit=5&format=json&accept-language=ja`,
+    {headers:{'User-Agent':'WeatherApp/1.0'}}
+  );
+  const nomData = await nom.json();
+
+  if(nomData && nomData.length > 0){
+    return nomData.map(r => {
+      const parts = r.display_name.split(',');
+      const name = parts[0].trim();
+      const region = parts.slice(1,3).map(s=>s.trim()).filter(Boolean).join(' ');
+      return {
+        name, region,
+        lat: parseFloat(r.lat),
+        lon: parseFloat(r.lon),
+        display: r.display_name,
+      };
+    });
+  }
+
+  // Fallback: Open-Meteo geocoding
+  const om = await fetch(
+    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=ja&format=json`
+  );
+  const omData = await om.json();
+  if(!omData.results || !omData.results.length) return [];
+  return omData.results.map(r => ({
+    name: r.name,
+    region: [r.admin1, r.country].filter(Boolean).join(', '),
+    lat: r.latitude,
+    lon: r.longitude,
+    display: [r.name, r.admin1, r.country].filter(Boolean).join(', '),
+  }));
 }
 
 async function fetchWeather(lat, lon){
+  const key = `${lat.toFixed(3)},${lon.toFixed(3)}`;
+  if(weatherCache[key]) return weatherCache[key];
   const url = [
     'https://api.open-meteo.com/v1/forecast',
-    '?latitude='+lat,
-    '&longitude='+lon,
+    `?latitude=${lat}&longitude=${lon}`,
     '&current=temperature_2m,apparent_temperature,precipitation,weathercode,windspeed_10m,relativehumidity_2m,uv_index',
     '&hourly=temperature_2m,weathercode,precipitation_probability',
     '&daily=weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset',
-    '&wind_speed_unit=kmh',
-    '&timezone=auto',
-    '&forecast_days=7',
+    '&wind_speed_unit=kmh&timezone=auto&forecast_days=7',
   ].join('');
   const r = await fetch(url);
-  return r.json();
+  const d = await r.json();
+  weatherCache[key] = d;
+  setTimeout(()=>delete weatherCache[key], 10*60*1000); // 10min cache
+  return d;
 }
 
-function dayName(dateStr, idx){
-  if(idx === 0) return '今日';
-  if(idx === 1) return '明日';
-  const d = new Date(dateStr);
-  return ['日','月','火','水','木','金','土'][d.getDay()] + '曜';
+/* ═══════════════════════════════════════════
+   RENDER
+═══════════════════════════════════════════ */
+function dayName(str,i){
+  if(i===0) return '今日';
+  if(i===1) return '明日';
+  return ['日','月','火','水','木','金','土'][new Date(str).getDay()]+'曜';
 }
+function hLabel(iso){ return new Date(iso).getHours()+'時'; }
 
-function hourLabel(isoStr){
-  return new Date(isoStr).getHours() + '時';
-}
-
-function renderWeather(geo, data){
+function buildFaceHTML(loc, data, idx){
   const cur = data.current;
   const wmo = getWmo(cur.weathercode);
-  applyThemeAnimation(wmo.theme);
-
   const daily = data.daily;
   const hourly = data.hourly;
-  const nowHour = new Date().getHours();
-  const hourStart = hourly.time.findIndex(t => new Date(t).getHours() >= nowHour - 1);
+  const nowH = new Date().getHours();
+  const hStart = Math.max(0, hourly.time.findIndex(t=>new Date(t).getHours()>=nowH-1));
   const hs = {
-    time: hourly.time.slice(hourStart, hourStart+24),
-    temp: hourly.temperature_2m.slice(hourStart, hourStart+24),
-    code: hourly.weathercode.slice(hourStart, hourStart+24),
-    rain: hourly.precipitation_probability.slice(hourStart, hourStart+24),
+    time: hourly.time.slice(hStart,hStart+24),
+    temp: hourly.temperature_2m.slice(hStart,hStart+24),
+    code: hourly.weathercode.slice(hStart,hStart+24),
+    rain: hourly.precipitation_probability.slice(hStart,hStart+24),
   };
 
   const allLo = Math.min(...daily.temperature_2m_min);
   const allHi = Math.max(...daily.temperature_2m_max);
-  const barPct = v => Math.max(0, Math.min(100, ((v - allLo) / (allHi - allLo)) * 100));
-
-  const htmlHourly = hs.time.map((t,i) => `
-    <div class="hour-item">
-      <span class="hour-time">${i === 0 ? '今' : hourLabel(t)}</span>
-      <span class="hour-icon">${getWmo(hs.code[i]).icon}</span>
-      <span class="hour-temp">${Math.round(hs.temp[i])}°</span>
-      <span class="hour-rain" ${hs.rain[i] <= 10 ? 'style="opacity:0"' : ''}>${hs.rain[i]}%</span>
-    </div>`).join('');
-
-  const htmlDaily = daily.temperature_2m_max.map((hi, i) => {
-    const lo = daily.temperature_2m_min[i];
-    const loP = barPct(lo), hiP = barPct(hi);
-    return `
-      <div class="daily-row">
-        <span class="daily-day">${dayName(daily.time[i], i)}</span>
-        <span class="daily-icon">${getWmo(daily.weathercode[i]).icon}</span>
-        <div class="daily-bar-wrap">
-          <span class="daily-lo">${Math.round(lo)}°</span>
-          <div class="daily-bar-bg">
-            <div class="daily-bar-fill" style="margin-left:${loP}%;width:${hiP-loP}%"></div>
-          </div>
-          <span class="daily-hi">${Math.round(hi)}°</span>
-        </div>
-      </div>`;
-  }).join('');
+  const bp = v => Math.max(0,Math.min(100,((v-allLo)/(allHi-allLo))*100));
 
   const uv = cur.uv_index;
-  const uvText = uv < 3 ? '低い' : uv < 6 ? '中程度' : uv < 8 ? '強い' : 'とても強い';
+  const uvText = uv<3?'低い':uv<6?'中程度':uv<8?'強い':'とても強い';
 
-  document.getElementById('content').innerHTML = `
+  const canDelete = locations.length > 1;
+
+  const htmlH = hs.time.map((t,i)=>`
+    <div class="hour-item">
+      <span class="hour-time">${i===0?'今':hLabel(t)}</span>
+      <span class="hour-icon">${getWmo(hs.code[i]).icon}</span>
+      <span class="hour-temp">${Math.round(hs.temp[i])}°</span>
+      <span class="hour-rain" style="${hs.rain[i]<=10?'opacity:0':''}"> ${hs.rain[i]}%</span>
+    </div>`).join('');
+
+  const htmlD = daily.temperature_2m_max.map((hi,i)=>{
+    const lo=daily.temperature_2m_min[i];
+    const lp=bp(lo),hp=bp(hi);
+    return `<div class="daily-row">
+      <span class="daily-day">${dayName(daily.time[i],i)}</span>
+      <span class="daily-icon">${getWmo(daily.weathercode[i]).icon}</span>
+      <div class="daily-bar-wrap">
+        <span class="daily-lo">${Math.round(lo)}°</span>
+        <div class="daily-bar-bg"><div class="daily-bar-fill" style="margin-left:${lp}%;width:${hp-lp}%"></div></div>
+        <span class="daily-hi">${Math.round(hi)}°</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+    <div class="search-bar">
+      <div class="search-wrap">
+        <input type="text" placeholder="都市・住所を検索" id="si-${idx}" autocomplete="off" oninput="onSearchInput(${idx},this.value)" onkeydown="onSearchKey(event,${idx})" />
+        <div class="ac-list" id="ac-${idx}" style="display:none"></div>
+      </div>
+      <button class="search-btn" onclick="doSearch(${idx})">検索</button>
+      <button class="search-btn" onclick="doGeoSearch(${idx})">📍</button>
+    </div>
+
     <div class="main-card">
-      <div class="city-name">${geo.name}${geo.admin1 ? ', '+geo.admin1 : ''}</div>
+      <div class="city-name">${loc.name}</div>
       <div class="current-temp">${Math.round(cur.temperature_2m)}°</div>
       <div class="weather-desc">${wmo.desc}</div>
       <div class="temp-range">最高 ${Math.round(daily.temperature_2m_max[0])}° / 最低 ${Math.round(daily.temperature_2m_min[0])}°</div>
       <div class="stats-row">
         <div class="stat"><div class="stat-label">体感</div><div class="stat-value">${Math.round(cur.apparent_temperature)}°</div></div>
         <div class="stat"><div class="stat-label">湿度</div><div class="stat-value">${cur.relativehumidity_2m}%</div></div>
-        <div class="stat"><div class="stat-label">風速</div><div class="stat-value">${Math.round(cur.windspeed_10m)}<span style="font-size:13px"> km/h</span></div></div>
+        <div class="stat"><div class="stat-label">風速</div><div class="stat-value">${Math.round(cur.windspeed_10m)}<span style="font-size:12px"> km/h</span></div></div>
       </div>
     </div>
-    <div class="hourly-card">
+
+    <div class="card">
       <div class="card-label">時間ごとの予報</div>
-      <div class="hourly-row">${htmlHourly}</div>
+      <div class="hourly-row">${htmlH}</div>
     </div>
-    <div class="daily-card">
+
+    <div class="card">
       <div class="card-label">7日間の予報</div>
-      ${htmlDaily}
+      ${htmlD}
     </div>
+
     <div class="extra-grid">
-      <div class="extra-card">
-        <div class="card-label">UV 指数</div>
-        <div class="extra-value">${Math.round(uv)}</div>
-        <div class="extra-sub">${uvText}</div>
-      </div>
-      <div class="extra-card">
-        <div class="card-label">降水量</div>
-        <div class="extra-value">${cur.precipitation}<span style="font-size:16px"> mm</span></div>
-        <div class="extra-sub">現在の降水</div>
-      </div>
-      <div class="extra-card">
-        <div class="card-label">日の出</div>
-        <div class="extra-value" style="font-size:22px">${daily.sunrise[0].slice(11,16)}</div>
-        <div class="extra-sub">今日</div>
-      </div>
-      <div class="extra-card">
-        <div class="card-label">日の入り</div>
-        <div class="extra-value" style="font-size:22px">${daily.sunset[0].slice(11,16)}</div>
-        <div class="extra-sub">今日</div>
-      </div>
+      <div class="extra-card"><div class="card-label">UV 指数</div><div class="extra-value">${Math.round(uv)}</div><div class="extra-sub">${uvText}</div></div>
+      <div class="extra-card"><div class="card-label">降水量</div><div class="extra-value">${cur.precipitation}<span style="font-size:15px"> mm</span></div><div class="extra-sub">現在</div></div>
+      <div class="extra-card"><div class="card-label">日の出</div><div class="extra-value" style="font-size:20px">${daily.sunrise[0].slice(11,16)}</div><div class="extra-sub">今日</div></div>
+      <div class="extra-card"><div class="card-label">日の入り</div><div class="extra-value" style="font-size:20px">${daily.sunset[0].slice(11,16)}</div><div class="extra-sub">今日</div></div>
+    </div>
+
+    ${canDelete ? `<button class="delete-btn" onclick="deleteLocation(${idx})">この場所を削除</button>` : ''}
+  `;
+}
+
+function buildEmptyFaceHTML(idx){
+  return `
+    <div class="status-msg">
+      <span>📍</span>
+      場所を追加して<br>天気を確認しましょう
     </div>`;
 }
 
-async function searchCity(){
-  const city = document.getElementById('cityInput').value.trim();
-  if(!city) return;
-  showLoading();
-  try {
-    const geo = await geocode(city);
-    const data = await fetchWeather(geo.latitude, geo.longitude);
-    renderWeather(geo, data);
-  } catch(e){ showError(e.message); }
-}
+/* ═══════════════════════════════════════════
+   SEARCH / AUTOCOMPLETE
+═══════════════════════════════════════════ */
+let acTimer = null;
+let acResults = [];
 
-async function getMyLocation(){
-  if(!navigator.geolocation){ showError('Geolocationが使用できません'); return; }
-  showLoading();
-  navigator.geolocation.getCurrentPosition(async pos => {
+async function onSearchInput(faceIdx, val){
+  if(acTimer) clearTimeout(acTimer);
+  const acEl = document.getElementById(`ac-${faceIdx}`);
+  if(!val || val.length < 2){ acEl.style.display='none'; return; }
+  acTimer = setTimeout(async()=>{
     try {
-      const { latitude: lat, longitude: lon } = pos.coords;
-      const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=ja`);
-      const geoData = await geoRes.json();
-      const cityName = geoData.address.city || geoData.address.town || geoData.address.village || '現在地';
-      const data = await fetchWeather(lat, lon);
-      renderWeather({ name: cityName, admin1: geoData.address.state || '' }, data);
-    } catch(e){ showError('天気の取得に失敗しました'); }
-  }, () => showError('位置情報の取得に失敗しました'));
+      acResults = await geocodeJP(val);
+      if(!acResults.length){ acEl.style.display='none'; return; }
+      acEl.innerHTML = acResults.map((r,i)=>`
+        <div class="ac-item" onclick="selectAc(${faceIdx},${i})">
+          <span class="ac-icon">📍</span>
+          <div>
+            <div class="ac-main">${r.name}</div>
+            <div class="ac-sub">${r.region}</div>
+          </div>
+        </div>`).join('');
+      acEl.style.display='block';
+    } catch(e){ acEl.style.display='none'; }
+  }, 350);
 }
 
-function showLoading(){ document.getElementById('content').innerHTML = '<p class="status-msg">読み込み中...</p>'; }
-function showError(msg){ document.getElementById('content').innerHTML = `<p class="status-msg" style="color:rgba(255,100,100,0.9)">${msg}</p>`; }
+async function selectAc(faceIdx, resIdx){
+  const r = acResults[resIdx];
+  if(!r) return;
+  document.getElementById(`ac-${faceIdx}`).style.display='none';
+  await loadLocationIntoFace(faceIdx, {name:r.name, region:r.region, lat:r.lat, lon:r.lon});
+}
 
-document.getElementById('cityInput').addEventListener('keydown', e => { if(e.key === 'Enter') searchCity(); });
-applyThemeAnimation('sunny');
+function onSearchKey(e, faceIdx){
+  if(e.key==='Enter') doSearch(faceIdx);
+  if(e.key==='Escape') document.getElementById(`ac-${faceIdx}`).style.display='none';
+}
+
+async function doSearch(faceIdx){
+  const val = document.getElementById(`si-${faceIdx}`).value.trim();
+  if(!val) return;
+  document.getElementById(`ac-${faceIdx}`).style.display='none';
+  setFaceLoading(faceIdx);
+  try {
+    const results = await geocodeJP(val);
+    if(!results.length){ setFaceError(faceIdx,'場所が見つかりません'); return; }
+    const r = results[0];
+    await loadLocationIntoFace(faceIdx, {name:r.name, region:r.region, lat:r.lat, lon:r.lon});
+  } catch(e){ setFaceError(faceIdx,'エラーが発生しました'); }
+}
+
+async function doGeoSearch(faceIdx){
+  if(!navigator.geolocation){ setFaceError(faceIdx,'位置情報が使えません'); return; }
+  setFaceLoading(faceIdx);
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    try {
+      const {latitude:lat,longitude:lon} = pos.coords;
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=ja`,{headers:{'User-Agent':'WeatherApp/1.0'}});
+      const d = await r.json();
+      const name = d.address.city||d.address.town||d.address.village||d.address.county||'現在地';
+      const region = d.address.state||'';
+      await loadLocationIntoFace(faceIdx,{name,region,lat,lon});
+    } catch(e){ setFaceError(faceIdx,'現在地の取得に失敗しました'); }
+  },()=>setFaceError(faceIdx,'位置情報の取得を拒否されました'));
+}
+
+/* ═══════════════════════════════════════════
+   LOCATION MANAGEMENT
+═══════════════════════════════════════════ */
+async function loadLocationIntoFace(faceIdx, locInfo){
+  setFaceLoading(faceIdx);
+  try {
+    const data = await fetchWeather(locInfo.lat, locInfo.lon);
+    const wmo = getWmo(data.current.weathercode);
+
+    locations[faceIdx] = { ...locInfo, theme: wmo.theme };
+    saveLocations();
+
+    const faceEl = document.getElementById(`face-${faceIdx}`);
+    faceEl.innerHTML = buildFaceHTML(locInfo, data, faceIdx);
+
+    if(faceIdx === currentIdx) applyTheme(wmo.theme);
+    renderTabs();
+  } catch(e){ setFaceError(faceIdx,'天気の取得に失敗しました'); }
+}
+
+function setFaceLoading(idx){
+  document.getElementById(`face-${idx}`).innerHTML = `
+    <div class="search-bar"><div class="search-wrap"><input type="text" placeholder="都市・住所を検索" /></div></div>
+    <div class="status-msg"><span>⏳</span>読み込み中...</div>`;
+}
+function setFaceError(idx, msg){
+  document.getElementById(`face-${idx}`).innerHTML = `
+    <div class="search-bar">
+      <div class="search-wrap">
+        <input type="text" placeholder="都市・住所を検索" id="si-${idx}" oninput="onSearchInput(${idx},this.value)" onkeydown="onSearchKey(event,${idx})" />
+        <div class="ac-list" id="ac-${idx}" style="display:none"></div>
+      </div>
+      <button class="search-btn" onclick="doSearch(${idx})">検索</button>
+      <button class="search-btn" onclick="doGeoSearch(${idx})">📍</button>
+    </div>
+    <div class="status-msg" style="color:rgba(255,160,160,0.9)"><span>⚠️</span>${msg}</div>`;
+}
+
+function deleteLocation(idx){
+  if(locations.length <= 1) return;
+  locations.splice(idx, 1);
+  saveLocations();
+  currentIdx = Math.min(currentIdx, locations.length - 1);
+  rebuildAllFaces();
+  rotateTo(currentIdx, 'none');
+  renderTabs();
+}
+
+function saveLocations(){
+  localStorage.setItem('wx_locs', JSON.stringify(locations));
+}
+
+/* ═══════════════════════════════════════════
+   CUBE ROTATION
+═══════════════════════════════════════════ */
+const cube = document.getElementById('cube');
+let currentRotY = 0;
+
+function rotateTo(idx, dir){
+  if(isAnimating) return;
+  const old = currentIdx;
+  currentIdx = idx;
+
+  // Compute shortest rotation
+  let diff = idx - old;
+  // Wrap around
+  const n = Math.max(locations.length, 1);
+  if(diff > n/2) diff -= n;
+  if(diff < -n/2) diff += n;
+
+  currentRotY -= diff * 90;
+
+  cube.style.transition = dir==='none'
+    ? 'none'
+    : `transform 0.65s cubic-bezier(0.4,0,0.2,1)`;
+  cube.style.transform = `rotateY(${currentRotY}deg)`;
+
+  if(dir !== 'none'){
+    isAnimating = true;
+    setTimeout(()=>{ isAnimating=false; }, 700);
+  }
+
+  // Update theme to new face
+  if(locations[idx]?.theme) applyTheme(locations[idx].theme);
+  renderTabs();
+}
+
+function goNext(){
+  if(locations.length < 2) return;
+  rotateTo((currentIdx+1) % locations.length, 'next');
+}
+function goPrev(){
+  if(locations.length < 2) return;
+  rotateTo((currentIdx-1+locations.length) % locations.length, 'prev');
+}
+
+/* ═══════════════════════════════════════════
+   TABS
+═══════════════════════════════════════════ */
+function renderTabs(){
+  const tabs = document.getElementById('locTabs');
+  let html = '';
+  locations.forEach((loc,i)=>{
+    html += `<div class="loc-dot${i===currentIdx?' active':''}" onclick="rotateTo(${i},'click')" title="${loc.name||''}"></div>`;
+  });
+  if(locations.length < 4){
+    html += `<div class="loc-dot add-btn" onclick="openModal()" title="場所を追加">+</div>`;
+  }
+  tabs.innerHTML = html;
+}
+
+/* ═══════════════════════════════════════════
+   ADD LOCATION MODAL
+═══════════════════════════════════════════ */
+let modalAcResults = [];
+let modalAcTimer = null;
+
+function openModal(){
+  document.getElementById('modal').classList.add('open');
+  document.getElementById('modalInput').value='';
+  document.getElementById('modalAc').style.display='none';
+  setTimeout(()=>document.getElementById('modalInput').focus(),100);
+}
+function closeModal(){
+  document.getElementById('modal').classList.remove('open');
+}
+
+document.getElementById('modalInput').addEventListener('input', async function(){
+  const val = this.value.trim();
+  const acEl = document.getElementById('modalAc');
+  if(modalAcTimer) clearTimeout(modalAcTimer);
+  if(!val || val.length < 2){ acEl.style.display='none'; return; }
+  modalAcTimer = setTimeout(async()=>{
+    try {
+      modalAcResults = await geocodeJP(val);
+      if(!modalAcResults.length){ acEl.style.display='none'; return; }
+      acEl.innerHTML = modalAcResults.map((r,i)=>`
+        <div class="ac-item" onclick="selectModalAc(${i})">
+          <span class="ac-icon">📍</span>
+          <div>
+            <div class="ac-main">${r.name}</div>
+            <div class="ac-sub">${r.region}</div>
+          </div>
+        </div>`).join('');
+      acEl.style.display='block';
+    } catch(e){ acEl.style.display='none'; }
+  }, 350);
+});
+
+document.getElementById('modalInput').addEventListener('keydown', e=>{
+  if(e.key==='Enter') confirmAdd();
+  if(e.key==='Escape') closeModal();
+});
+
+async function selectModalAc(i){
+  const r = modalAcResults[i];
+  if(!r) return;
+  document.getElementById('modalInput').value = r.name;
+  document.getElementById('modalAc').style.display='none';
+  await addLocation(r);
+}
+
+async function confirmAdd(){
+  const val = document.getElementById('modalInput').value.trim();
+  if(!val) return;
+  document.getElementById('modalAc').style.display='none';
+  try {
+    const results = await geocodeJP(val);
+    if(!results.length){ alert('場所が見つかりません'); return; }
+    await addLocation(results[0]);
+  } catch(e){ alert('エラーが発生しました'); }
+}
+
+async function addCurrentLocation(){
+  closeModal();
+  if(!navigator.geolocation){ alert('位置情報が使えません'); return; }
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    try {
+      const {latitude:lat,longitude:lon} = pos.coords;
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=ja`,{headers:{'User-Agent':'WeatherApp/1.0'}});
+      const d = await r.json();
+      const name = d.address.city||d.address.town||d.address.village||'現在地';
+      const region = d.address.state||'';
+      await addLocation({name,region,lat,lon});
+    } catch(e){ alert('現在地の取得に失敗しました'); }
+  });
+}
+
+async function addLocation(r){
+  closeModal();
+  const newIdx = locations.length;
+  if(newIdx >= 4) return;
+  locations.push({name:r.name, region:r.region||'', lat:r.lat, lon:r.lon, theme:'sunny'});
+  saveLocations();
+  renderTabs();
+  rotateTo(newIdx, 'none');
+  await loadLocationIntoFace(newIdx, locations[newIdx]);
+}
+
+/* ═══════════════════════════════════════════
+   SWIPE SUPPORT
+═══════════════════════════════════════════ */
+let touchStartX = 0;
+document.addEventListener('touchstart', e=>{ touchStartX = e.touches[0].clientX; }, {passive:true});
+document.addEventListener('touchend', e=>{
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  if(Math.abs(dx) > 50){
+    if(dx < 0) goNext(); else goPrev();
+  }
+},{passive:true});
+
+// Keyboard
+document.addEventListener('keydown', e=>{
+  if(e.key==='ArrowRight') goNext();
+  if(e.key==='ArrowLeft') goPrev();
+});
+
+/* ═══════════════════════════════════════════
+   CUBE FACE LAYOUT
+   We use translateZ so faces don't overlap.
+   The stage perspective must match.
+═══════════════════════════════════════════ */
+function setupCubeFaces(){
+  // Each face is rotated Y by 0/90/180/270
+  // translateZ = half the "width" conceptually
+  // Since we're doing full-page, we use a transform trick:
+  // face-0: default (front)
+  // face-1: rotateY(-90deg) - right face
+  // face-2: rotateY(-180deg) - back
+  // face-3: rotateY(-270deg) - left face
+  // The cube rotates in +Y direction for "next" (swipe left)
+  const W = window.innerWidth;
+  const faces = document.querySelectorAll('.cube-face');
+  const angles = [0, 90, 180, 270];
+  faces.forEach((f,i)=>{
+    f.style.transform = `rotateY(${angles[i]}deg) translateZ(${W/2}px)`;
+  });
+}
+
+function onResize(){
+  setupCubeFaces();
+  // Reapply current rotation without transition
+  cube.style.transition='none';
+  cube.style.transform=`rotateY(${currentRotY}deg)`;
+}
+
+window.addEventListener('resize', onResize);
+
+/* ═══════════════════════════════════════════
+   REBUILD ALL FACES
+═══════════════════════════════════════════ */
+async function rebuildAllFaces(){
+  // Clear all faces
+  for(let i=0;i<4;i++){
+    const f = document.getElementById(`face-${i}`);
+    if(i < locations.length){
+      f.innerHTML = `<div class="status-msg"><span>⏳</span>読み込み中...</div>`;
+    } else {
+      f.innerHTML = '';
+    }
+  }
+  renderTabs();
+
+  // Load all
+  for(let i=0;i<locations.length;i++){
+    const loc = locations[i];
+    try {
+      const data = await fetchWeather(loc.lat, loc.lon);
+      const wmo = getWmo(data.current.weathercode);
+      locations[i].theme = wmo.theme;
+      document.getElementById(`face-${i}`).innerHTML = buildFaceHTML(loc, data, i);
+    } catch(e){
+      setFaceError(i,'天気の取得に失敗しました');
+    }
+  }
+  saveLocations();
+
+  if(locations[currentIdx]?.theme) applyTheme(locations[currentIdx].theme);
+  renderTabs();
+}
+
+/* ═══════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════ */
+async function init(){
+  setupCubeFaces();
+  applyTheme('sunny');
+  cube.style.transition='none';
+  cube.style.transform=`rotateY(0deg)`;
+
+  if(!locations.length){
+    // Start with empty first face
+    locations = [{name:'', region:'', lat:35.6812, lon:139.7671, theme:'sunny'}];
+    document.getElementById('face-0').innerHTML = `
+      <div class="search-bar">
+        <div class="search-wrap">
+          <input type="text" placeholder="都市・住所を検索 (例: 川越市)" id="si-0" autocomplete="off"
+            oninput="onSearchInput(0,this.value)" onkeydown="onSearchKey(event,0)" />
+          <div class="ac-list" id="ac-0" style="display:none"></div>
+        </div>
+        <button class="search-btn" onclick="doSearch(0)">検索</button>
+        <button class="search-btn" onclick="doGeoSearch(0)">📍</button>
+      </div>
+      <div class="status-msg">
+        <span>🌤</span>
+        都市名・住所を入力するか<br>📍 現在地ボタンを押してください<br>
+        <span style="font-size:14px;display:block;margin-top:12px;color:rgba(255,255,255,0.45)">
+          例: 埼玉県川越市、渋谷区、大阪市北区
+        </span>
+      </div>`;
+    renderTabs();
+  } else {
+    await rebuildAllFaces();
+  }
+}
+
+// Close modal on backdrop click
+document.getElementById('modal').addEventListener('click', function(e){
+  if(e.target===this) closeModal();
+});
+
+init();
 </script>
 </body>
 </html>
